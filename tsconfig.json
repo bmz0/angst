@@ -13,7 +13,9 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
-    "module": "preserve"
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noUncheckedSideEffectImports": true
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
