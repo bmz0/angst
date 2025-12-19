@@ -1,29 +1,19 @@
 <button (click)="init()">Initialize Audio</button>
 <br>
-<canvas #canvas></canvas>
+<osc-visualizer [analyser]="analyser"></osc-visualizer>
 <br>
-<select [(ngModel)]="oscillatorType" (ngModelChange)="onOscillatorTypeChange()">
-  <option value="sine">Sine</option>
-  <option value="square">Square</option>
-  <option value="sawtooth">Sawtooth</option>
-  <option value="triangle">Triangle</option>
-</select>
+<oscillator-type-selector 
+  [(oscillatorType)]="oscillatorType" 
+  (oscillatorTypeChange)="onOscillatorTypeChange()">
+</oscillator-type-selector>
 <br>
-<button (click)="play('C')">C</button>
-<button (click)="play('C#')">C#</button>
-<button (click)="play('D')">D</button>
-<button (click)="play('D#')">D#</button>
-<button (click)="play('E')">E</button>
-<button (click)="play('F')">F</button>
-<button (click)="play('F#')">F#</button>
-<button (click)="play('G')">G</button>
-<button (click)="play('G#')">G#</button>
-<button (click)="play('A')">A</button>
-<button (click)="play('A#')">A#</button>
-<button (click)="play('B')">B</button>
-<button (click)="play('C', 1)">C</button>
-<br>
-<button (click)="stop()">Stop</button>
+<piano-keyboard 
+  [currentOctave]="currentOctave"
+  (notePressed)="play($event.note, $event.octaveOffset)"
+  (noteReleased)="stop()"
+  (octaveChanged)="currentOctave = $event"
+  (oscillatorTypeToggled)="toggleOscillatorType()">
+</piano-keyboard>
 <br>
 <label>Gain <input type="range" min="0" max="1" step="0.01" [(ngModel)]="gain" (ngModelChange)="onGainChange()" /></label>
 <br>

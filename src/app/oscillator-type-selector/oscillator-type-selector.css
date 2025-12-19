@@ -1,0 +1,50 @@
+.oscillator-type-selector {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.oscillator-type-selector:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+.type-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border: 1px solid #0cc;
+  border-radius: 4px;
+}
+
+.type-option:hover {
+  background-color: #044;
+}
+
+.type-option input[type="radio"] {
+  margin: 0;
+}
+
+.type-option:has(input[type="radio"]:checked) {
+  background-color: #033;
+}
+
+.type-option input[type="radio"]:checked + svg {
+  color: #007bff;
+}
+
+.type-option svg {
+  display: block;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.type-option span {
+  font-size: 14px;
+  user-select: none;
+}

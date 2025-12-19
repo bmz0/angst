@@ -1,26 +1,26 @@
-import { Component, HostListener, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { getFrequency } from '../utils/common.js';
-import { drawWaveform } from '../utils/visualizer.js';
 import { FormsModule } from '@angular/forms';
+import { Visualizer } from '../visualizer/visualizer.js';
+import { Keyboard } from '../keyboard/keyboard.js';
+import { OscillatorTypeSelector } from '../oscillator-type-selector/oscillator-type-selector.js';
 
 @Component({
   selector: 'app-synth',
-  imports: [FormsModule],
+  imports: [FormsModule, Visualizer, Keyboard, OscillatorTypeSelector],
   templateUrl: './synth.html',
   styleUrls: ['./synth.css'],
   standalone: true
 })
-export class Synth implements AfterViewInit {
-  @ViewChild('canvas', { static: false }) canvasRef!: ElementRef<HTMLCanvasElement>;
+export class Synth {
+  @ViewChild(Visualizer) visualizerRef!: Visualizer;
   
   private audioContext?: AudioContext;
   private oscillator?: OscillatorNode;
-  private analyser?: AnalyserNode;
+  protected analyser?: AnalyserNode;
   private gainNode?: GainNode;
   private waveShaperNode?: WaveShaperNode;
   private frequencyParam?: AudioParam;
-  private canvasContext?: CanvasRenderingContext2D;
-  private animationId?: number;
   private lastPlayedFrequency?: number;
   protected isPlaying = false;
   protected oscillatorType: OscillatorType = 'sine';
@@ -29,26 +29,6 @@ export class Synth implements AfterViewInit {
   protected currentOctave = 4;
 
   private readonly oscillatorTypes: OscillatorType[] = ['sine', 'square', 'sawtooth', 'triangle'];
-
-  private readonly keyMap: Record<string, string> = {
-    'KeyA': 'C',
-    'KeyW': 'C#',
-    'KeyS': 'D',
-    'KeyE': 'D#',
-    'KeyD': 'E',
-    'KeyF': 'F',
-    'KeyT': 'F#',
-    'KeyG': 'G',
-    'KeyY': 'G#',
-    'KeyH': 'A',
-    'KeyU': 'A#',
-    'KeyJ': 'B',
-    'KeyK': 'C'
-  };
-
-  ngAfterViewInit(): void {
-    this.canvasContext = this.canvasRef.nativeElement.getContext('2d')!;
-  }
 
   protected init(): void {
     if (!this.audioContext) {
@@ -59,7 +39,6 @@ export class Synth implements AfterViewInit {
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
       this.analyser.smoothingTimeConstant = 0.5;
-      this.waveShaperNode.curve = new Float32Array([-1.2, 0, 1.5]);
       this.gainNode.connect(this.waveShaperNode);
       this.waveShaperNode.connect(this.analyser);
       this.analyser.connect(this.audioContext.destination);
@@ -67,58 +46,12 @@ export class Synth implements AfterViewInit {
   }
 
   protected onGainChange(): void {
-    if (this.gainNode && this.audioContext) {
-      this.gainNode.gain.setValueAtTime(this.gain, this.audioContext.currentTime);
+    if (this.gainNode) {
+      this.gainNode.gain.value = this.gain;
     }
   }
 
-  @HostListener('window:keydown', ['$event'])
-  protected handleKeyDown(event: KeyboardEvent): void {
-    if (event.code === 'Escape' || event.code === 'Space') {
-      event.preventDefault();
-      this.stop();
-      return;
-    }
-
-    if (event.code === 'KeyO') {
-      event.preventDefault();
-      this.toggleOscillatorType();
-      return;
-    }
-
-    if (event.code === 'Comma') {
-      event.preventDefault();
-      this.decrementOctave();
-      return;
-    }
-
-    if (event.code === 'Period') {
-      event.preventDefault();
-      this.incrementOctave();
-      return;
-    }
-
-    const note = this.keyMap[event.code];
-    if (note) {
-      event.preventDefault();
-      const octaveOffset = note === 'C' && event.code === 'KeyK' ? 1 : 0;
-      this.play(note, octaveOffset);
-    }
-  }
-
-  private incrementOctave(): void {
-    if (this.currentOctave < 9) {
-      this.currentOctave++;
-    }
-  }
-
-  private decrementOctave(): void {
-    if (this.currentOctave > 0) {
-      this.currentOctave--;
-    }
-  }
-
-  private toggleOscillatorType(): void {
+  protected toggleOscillatorType(): void {
     const currentIndex = this.oscillatorTypes.indexOf(this.oscillatorType);
     const nextIndex = (currentIndex + 1) % this.oscillatorTypes.length;
     this.oscillatorType = this.oscillatorTypes[nextIndex];
@@ -126,8 +59,8 @@ export class Synth implements AfterViewInit {
   }
 
   protected onOscillatorTypeChange(): void {
-    if (this.isPlaying && this.oscillator) {
-      const frequency = this.oscillator.frequency.value;
+    if (this.isPlaying && this.lastPlayedFrequency) {
+      const frequency = this.lastPlayedFrequency;
       this.stop();
       this.playFrequency(frequency);
     }
@@ -140,11 +73,14 @@ export class Synth implements AfterViewInit {
     this.playFrequency(frequency);
   }
 
-  private playFrequency(frequency: number): void {    
+  private playFrequency(frequency: number): void {
+    if (!this.audioContext) {
+      this.init();
+    }
 
     if (!this.audioContext) return;
     
-    this.oscillator = this.audioContext!.createOscillator();
+    this.oscillator = this.audioContext.createOscillator();
     this.oscillator.type = this.oscillatorType;
     this.frequencyParam = this.oscillator.frequency;
     
@@ -161,27 +97,11 @@ export class Synth implements AfterViewInit {
     this.oscillator.start();
     this.isPlaying = true;
     
-    this.visualize();
-  }
-
-  private visualize(): void {
-    if (!this.analyser || !this.canvasContext) return;
-
-    const canvas = this.canvasRef.nativeElement;
-
-    const draw = () => {
-      this.animationId = requestAnimationFrame(draw);
-      drawWaveform(this.analyser!, canvas, this.canvasContext!);
-    };
-    
-    draw();
+    this.visualizerRef.start();
   }
 
   protected stop(): void {
-    if (this.animationId) {
-      cancelAnimationFrame(this.animationId);
-      this.animationId = undefined;
-    }
+    this.visualizerRef?.stop();
     this.oscillator?.stop();
     this.oscillator = undefined;
     this.isPlaying = false;

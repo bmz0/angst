@@ -1,0 +1,42 @@
+.piano-keyboard {
+  display: flex;
+  height: 200px;
+  margin: 20px 0;
+  width: fit-content;
+}
+
+.white-key {
+  width: 60px;
+  height: 200px;
+  background: white;
+  border: 1px solid #000;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.white-key:active,
+.white-key.active {
+  background: #e0e0e0;
+}
+
+.black-key {
+  width: 40px;
+  height: 120px;
+  background: #000;
+  border: 1px solid #000;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: -20px;
+  margin-right: -20px;
+  z-index: 1;
+}
+
+.black-key:active,
+.black-key.active {
+  background: #555;
+}
+
+.stop-button {
+  margin-top: 10px;
+}
