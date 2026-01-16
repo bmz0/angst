@@ -1,16 +1,12 @@
 <div class="piano-keyboard">
-  <button class="white-key" [class.active]="isActive('C')" (click)="playNote('C')"></button>
-  <button class="black-key" [class.active]="isActive('C#')" (click)="playNote('C#')"></button>
-  <button class="white-key" [class.active]="isActive('D')" (click)="playNote('D')"></button>
-  <button class="black-key" [class.active]="isActive('D#')" (click)="playNote('D#')"></button>
-  <button class="white-key" [class.active]="isActive('E')" (click)="playNote('E')"></button>
-  <button class="white-key" [class.active]="isActive('F')" (click)="playNote('F')"></button>
-  <button class="black-key" [class.active]="isActive('F#')" (click)="playNote('F#')"></button>
-  <button class="white-key" [class.active]="isActive('G')" (click)="playNote('G')"></button>
-  <button class="black-key" [class.active]="isActive('G#')" (click)="playNote('G#')"></button>
-  <button class="white-key" [class.active]="isActive('A')" (click)="playNote('A')"></button>
-  <button class="black-key" [class.active]="isActive('A#')" (click)="playNote('A#')"></button>
-  <button class="white-key" [class.active]="isActive('B')" (click)="playNote('B')"></button>
-  <button class="white-key" [class.active]="isActive('C', 1)" (click)="playNote('C', 1)"></button>
+  @for (key of keys; track key.note + key.octaveOffset) {
+    <button 
+      [class]="key.isBlack ? 'black-key' : 'white-key'" 
+      [class.active]="isActive(key.note, key.octaveOffset)" 
+      (pointerdown)="playNote(key.note, key.octaveOffset)" 
+      (pointerleave)="stopNote(key.note, key.octaveOffset)"
+      (pointerup)="stopNote(key.note, key.octaveOffset)">
+    </button>
+  }
 </div>
 <button class="stop-button" (click)="stop()">Stop</button>

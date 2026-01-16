@@ -1,5 +1,5 @@
-import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
-import { drawWaveform } from '../utils/visualizer.js';
+import { Component, ViewChild, ElementRef, AfterViewInit, OnDestroy, input } from '@angular/core';
+import { drawWaveform } from './canvasDrawer.js';
 
 @Component({
   selector: 'osc-visualizer',
@@ -9,7 +9,7 @@ import { drawWaveform } from '../utils/visualizer.js';
 })
 export class Visualizer implements AfterViewInit, OnDestroy {
   @ViewChild('canvas', { static: false }) canvasRef!: ElementRef<HTMLCanvasElement>;
-  @Input() analyser?: AnalyserNode;
+  analyser = input<AnalyserNode>();
   
   private canvasContext?: CanvasRenderingContext2D;
   private animationId?: number;
@@ -29,7 +29,7 @@ export class Visualizer implements AfterViewInit, OnDestroy {
 
     const draw = () => {
       this.animationId = requestAnimationFrame(draw);
-      drawWaveform(this.analyser!, canvas, this.canvasContext!);
+      drawWaveform(this.analyser()!, canvas, this.canvasContext!);
     };
     
     draw();

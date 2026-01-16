@@ -1,22 +1,48 @@
-<button (click)="init()">Initialize Audio</button>
-<br>
-<osc-visualizer [analyser]="analyser"></osc-visualizer>
-<br>
-<oscillator-type-selector 
-  [(oscillatorType)]="oscillatorType" 
-  (oscillatorTypeChange)="onOscillatorTypeChange()">
-</oscillator-type-selector>
-<br>
-<piano-keyboard 
-  [currentOctave]="currentOctave"
-  (notePressed)="play($event.note, $event.octaveOffset)"
-  (noteReleased)="stop()"
-  (octaveChanged)="currentOctave = $event"
-  (oscillatorTypeToggled)="toggleOscillatorType()">
-</piano-keyboard>
-<br>
-<label>Gain <input type="range" min="0" max="1" step="0.01" [(ngModel)]="gain" (ngModelChange)="onGainChange()" /></label>
-<br>
-<label>Glide Time <input type="range" min="0" max="0.5" step="0.01" [(ngModel)]="glideTime" /></label>
-<br>
-Octave: {{ currentOctave }}
+<div class="synth-container">
+  <oscillator-selector
+    [selectedType]="oscillatorType()"
+    (typeSelected)="onOscillatorTypeSelected($event)">
+  </oscillator-selector>
+
+  <div class="distortion-controls">
+    <label>
+      <input 
+        type="checkbox" 
+        [checked]="distortionEnabled()"
+        (change)="toggleDistortion()">
+      Distortion
+    </label>
+    
+    @if (distortionEnabled()) {
+      <label>
+        Amount:
+        <input 
+          type="range" 
+          min="0" 
+          max="100" 
+          [value]="distortionAmount()"
+          (input)="onDistortionAmountChange(+$any($event.target).value)">
+        <span>{{ distortionAmount() }}</span>
+      </label>
+    }
+
+    <label>
+      <input 
+        type="checkbox" 
+        [checked]="sustainMode()"
+        (change)="toggleSustainMode()">
+      Sustain Mode
+    </label>
+  </div>
+
+  <osc-visualizer [analyser]="analyser"></osc-visualizer>
+
+  <piano-keyboard
+    [(currentOctave)]="currentOctave"
+    [sustainMode]="sustainMode()"
+    (notePressed)="play($event.note, $event.octaveOffset)"
+    (noteReleased)="stop()"
+    (octaveChanged)="onOctaveChanged($event)"
+    (oscillatorTypeToggled)="toggleOscillatorType()">
+  </piano-keyboard>
+</div>

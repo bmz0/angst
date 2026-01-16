@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, Input, HostListener } from '@angular/core';
+import { Component, HostListener, input, output, model } from '@angular/core';
 
 export interface NoteEvent {
   note: string;
@@ -14,6 +14,12 @@ interface KeyboardAction {
   octaveOffset?: number;
 }
 
+interface KeyDefinition {
+  note: string;
+  isBlack: boolean;
+  octaveOffset: number;
+}
+
 @Component({
   selector: 'piano-keyboard',
   templateUrl: './keyboard.html',
@@ -21,13 +27,30 @@ interface KeyboardAction {
   standalone: true
 })
 export class Keyboard {
-  @Input() currentOctave = 4;
-  @Output() notePressed = new EventEmitter<NoteEvent>();
-  @Output() noteReleased = new EventEmitter<void>();
-  @Output() octaveChanged = new EventEmitter<number>();
-  @Output() oscillatorTypeToggled = new EventEmitter<void>();
+  public currentOctave = model(4);
+  public sustainMode = input(false);
+  protected notePressed = output<NoteEvent>();
+  protected noteReleased = output<void>();
+  protected octaveChanged = output<number>();
+  protected oscillatorTypeToggled = output<void>();
 
   protected activeNote?: string;
+
+  protected readonly keys: KeyDefinition[] = [
+    { note: 'C', isBlack: false, octaveOffset: 0 },
+    { note: 'C#', isBlack: true, octaveOffset: 0 },
+    { note: 'D', isBlack: false, octaveOffset: 0 },
+    { note: 'D#', isBlack: true, octaveOffset: 0 },
+    { note: 'E', isBlack: false, octaveOffset: 0 },
+    { note: 'F', isBlack: false, octaveOffset: 0 },
+    { note: 'F#', isBlack: true, octaveOffset: 0 },
+    { note: 'G', isBlack: false, octaveOffset: 0 },
+    { note: 'G#', isBlack: true, octaveOffset: 0 },
+    { note: 'A', isBlack: false, octaveOffset: 0 },
+    { note: 'A#', isBlack: true, octaveOffset: 0 },
+    { note: 'B', isBlack: false, octaveOffset: 0 },
+    { note: 'C', isBlack: false, octaveOffset: 1 }
+  ];
 
   private readonly keyMap: Record<string, string> = {
     'KeyA': 'C',
@@ -47,12 +70,24 @@ export class Keyboard {
 
   @HostListener('window:keydown', ['$event'])
   protected handleKeyDown(event: KeyboardEvent): void {
+    // Prevent key repeat
+    if (event.repeat) return;
+
     const action = this.parseKeyEvent(event);
     
     if (!action) return;
     
     event.preventDefault();
     this.executeAction(action);
+  }
+
+  @HostListener('window:keyup', ['$event'])
+  protected handleKeyUp(event: KeyboardEvent): void {
+    const note = this.keyMap[event.code];
+    if (note && !this.sustainMode()) {
+      event.preventDefault();
+      this.stop();
+    }
   }
 
   private parseKeyEvent(event: KeyboardEvent): KeyboardAction | null {
@@ -101,6 +136,13 @@ export class Keyboard {
     this.notePressed.emit({ note, octaveOffset });
   }
 
+  protected stopNote(note: string, octaveOffset: number = 0): void {
+    const noteKey = octaveOffset === 1 ? `${note}-high` : note;
+    if (this.activeNote === noteKey && !this.sustainMode()) {
+      this.stop();
+    }
+  }
+
   protected stop(): void {
     this.activeNote = undefined;
     this.noteReleased.emit();
@@ -112,16 +154,18 @@ export class Keyboard {
   }
 
   private incrementOctave(): void {
-    if (this.currentOctave < 9) {
-      this.currentOctave++;
-      this.octaveChanged.emit(this.currentOctave);
+    const currentOctave = this.currentOctave();
+    if (currentOctave < 9) {
+      this.currentOctave.set(currentOctave + 1)
+      this.octaveChanged.emit(currentOctave + 1);
     }
   }
 
   private decrementOctave(): void {
-    if (this.currentOctave > 0) {
-      this.currentOctave--;
-      this.octaveChanged.emit(this.currentOctave);
+    const currentOctave = this.currentOctave();
+    if (currentOctave > 0) {
+      this.currentOctave.set(currentOctave - 1);
+      this.octaveChanged.emit(currentOctave - 1);
     }
   }
 }
