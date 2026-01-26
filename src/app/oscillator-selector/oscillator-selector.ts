@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { OscillatorType } from '../utils/oscillator.js';
 
+let id = 0;
 @Component({
   selector: 'oscillator-selector',
   templateUrl: './oscillator-selector.html',
@@ -10,8 +11,10 @@ import { OscillatorType } from '../utils/oscillator.js';
   imports: [FormsModule]
 })
 export class OscillatorSelector {
-  @Input() selectedType: OscillatorType = 'sine';
-  @Output() typeSelected = new EventEmitter<OscillatorType>();
+  selectorId = ++id;
+
+  selectedType = input<OscillatorType>('sine');
+  typeSelected = output<OscillatorType>();
 
   protected oscillatorType: OscillatorType = 'sine';
 

@@ -1,83 +1,106 @@
-/**
- * Creates a soft clipping/overdrive distortion curve using arctangent-like waveshaping.
- * @param amount - Distortion intensity (0 = clean, higher values = more distortion)
- * @param samples - Number of samples in the curve (default: 44100)
- * @returns Float32Array suitable for WaveShaperNode.curve
- */
-export function makeDistortionCurve(amount: number, samples: number = 44100) {
-  const curve = new Float32Array(samples);
-  const deg = Math.PI / 180;
-  let maxValue = 0;
+export type DistortionType = 'soft' | 'hard';
 
-  // Generate curve and find peak
-  for (let i = 0; i < samples; i++) {
-    const x = (i * 2) / samples - 1;
-    curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
-    maxValue = Math.max(maxValue, Math.abs(curve[i]));
-  }
-
-  // Normalize to prevent level loss
-  const normalizationFactor = 1.0 / maxValue;
-  for (let i = 0; i < samples; i++) {
-    curve[i] *= normalizationFactor;
-  }
-
-  return curve;
+export interface DistortionConfig {
+  audioContext: AudioContext;
+  destination: AudioNode;
+  type?: DistortionType;
+  amount?: number;
+  enabled?: boolean;
 }
 
-/**
- * Creates a hard clipping curve with threshold-based folding and normalization.
- * Samples exceeding the threshold are folded back by subtracting the excess.
- * The curve is normalized to maintain consistent output level.
- * 
- * @param threshold - Clipping threshold (0.0 to 1.0). Lower values = more distortion
- * @param samples - Number of samples in the transfer curve
- * @returns Float32Array representing the waveshaper curve
- */
-export function makeHardClipCurve(threshold: number = 0.5, samples: number = 44100) {
-  const curve = new Float32Array(samples);
-  
-  // Clamp threshold between 0.1 and 1.0 to prevent extreme values
-  const clampedThreshold = Math.max(0.1, Math.min(1.0, threshold));
-  
-  let maxValue = 0;
-  
-  // Generate curve and find peak value
-  for (let i = 0; i < samples; i++) {
-    const x = (i * 2) / samples - 1; // Map to -1 to 1
-    
-    if (x > clampedThreshold) {
-      // Positive overflow: subtract excess from threshold
-      curve[i] = clampedThreshold - (x - clampedThreshold);
-    } else if (x < -clampedThreshold) {
-      // Negative overflow: subtract excess from negative threshold
-      curve[i] = -clampedThreshold - (x + clampedThreshold);
-    } else {
-      // Within threshold: pass through unchanged
-      curve[i] = x;
+export interface DistortionParams {
+  type?: DistortionType;
+  amount?: number;
+  enabled?: boolean;
+}
+
+export class DistortionController {
+  private waveShaperNode: WaveShaperNode;
+  private readonly audioContext: AudioContext;
+  private distortionType: DistortionType = 'hard';
+  private distortionAmount: number = 0;
+  private distortionEnabled: boolean = false;
+
+  constructor(config: DistortionConfig) {
+    this.audioContext = config.audioContext;
+    this.distortionType = config.type ?? 'hard';
+    this.distortionAmount = config.amount ?? 0;
+    this.distortionEnabled = config.enabled ?? false;
+
+    this.waveShaperNode = this.audioContext.createWaveShaper();
+    this.waveShaperNode.connect(config.destination);
+    this.updateCurve();
+  }
+
+  getInput(): WaveShaperNode {
+    return this.waveShaperNode;
+  }
+
+  setParams(params: DistortionParams): void {
+    if (params.type !== undefined) {
+      this.distortionType = params.type;
     }
-    
-    maxValue = Math.max(maxValue, Math.abs(curve[i]));
+    if (params.amount !== undefined) {
+      this.distortionAmount = params.amount;
+    }
+    if (params.enabled !== undefined) {
+      this.distortionEnabled = params.enabled;
+    }
+    this.updateCurve();
   }
-  
-  // Normalize to prevent level loss
-  const normalizationFactor = maxValue > 0 ? 1.0 / maxValue : 1.0;
-  for (let i = 0; i < samples; i++) {
-    curve[i] *= normalizationFactor;
+
+  getParams(): Required<DistortionParams> {
+    return {
+      type: this.distortionType,
+      amount: this.distortionAmount,
+      enabled: this.distortionEnabled
+    };
   }
-  
-  return curve;
+
+  setType(type: DistortionType): void {
+    this.distortionType = type;
+    this.updateCurve();
+  }
+
+  getType(): DistortionType {
+    return this.distortionType;
+  }
+
+  setAmount(amount: number): void {
+    this.distortionAmount = amount;
+    this.updateCurve();
+  }
+
+  getAmount(): number {
+    return this.distortionAmount;
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.distortionEnabled = enabled;
+    this.updateCurve();
+  }
+
+  isEnabled(): boolean {
+    return this.distortionEnabled;
+  }
+
+  disconnect(): void {
+    this.waveShaperNode.disconnect();
+  }
+
+  private updateCurve(): void {
+    if (!this.distortionEnabled) {
+      this.waveShaperNode.curve = makeBypassCurve();
+      return;
+    }
+
+    if (this.distortionType === 'soft') {
+      this.waveShaperNode.curve = makeSoftClipCurve(this.distortionAmount);
+    } else {
+      const threshold = 1.0 - (this.distortionAmount / 100);
+      this.waveShaperNode.curve = makeHardClipCurve(threshold);
+    }
+  }
 }
 
-/**
- * Creates a bypass curve (linear pass-through, no distortion).
- * @param samples - Number of samples in the curve (default: 44100)
- * @returns Float32Array with identity mapping
- */
-export function makeBypassCurve(samples: number = 44100) {
-  const curve = new Float32Array(samples);
-  for (let i = 0; i < samples; i++) {
-    curve[i] = (i * 2) / samples - 1;
-  }
-  return curve;
-}
+import { makeBypassCurve, makeHardClipCurve, makeSoftClipCurve } from './distortionCurves.js';

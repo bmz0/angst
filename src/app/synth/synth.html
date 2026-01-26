@@ -1,45 +1,101 @@
 <div class="synth-container">
-  <oscillator-selector
-    [selectedType]="oscillatorType()"
-    (typeSelected)="onOscillatorTypeSelected($event)">
-  </oscillator-selector>
+  <div class="oscillator-controls">
+    <div class="oscillator-section">
+      <h3>Oscillator 1</h3>
+      <oscillator-selector
+        [selectedType]="oscillator1Type()"
+        (typeSelected)="onOscillator1TypeSelected($event)">
+      </oscillator-selector>
+    </div>
 
-  <div class="distortion-controls">
-    <label>
-      <input 
-        type="checkbox" 
-        [checked]="distortionEnabled()"
-        (change)="toggleDistortion()">
-      Distortion
-    </label>
-    
-    @if (distortionEnabled()) {
+    <div class="oscillator-section">
+      <h3>Oscillator 2 (Sub Octave)</h3>
+      <oscillator-selector
+        [selectedType]="oscillator2Type()"
+        (typeSelected)="onOscillator2TypeSelected($event)">
+      </oscillator-selector>
+    </div>
+  </div>
+
+  <div class="effects-controls">
+    <div class="effect-section">
+      <h3>Distortion</h3>
       <label>
-        Amount:
         <input 
-          type="range" 
-          min="0" 
-          max="100" 
-          [value]="distortionAmount()"
-          (input)="onDistortionAmountChange(+$any($event.target).value)">
-        <span>{{ distortionAmount() }}</span>
+          type="checkbox" 
+          [checked]="distortionEnabled()"
+          (change)="toggleDistortion()">
+        Enable
       </label>
-    }
+      
+      @if (distortionEnabled()) {
+        <label>
+          Amount:
+          <input 
+            type="range" 
+            min="0" 
+            max="100" 
+            [value]="distortionAmount()"
+            (input)="onDistortionAmountChange(+$any($event.target).value)">
+          <span>{{ distortionAmount() }}</span>
+        </label>
+      }
+    </div>
 
-    <label>
-      <input 
-        type="checkbox" 
-        [checked]="sustainMode()"
-        (change)="toggleSustainMode()">
-      Sustain Mode
-    </label>
+    <div class="effect-section">
+      <h3>Delay</h3>
+      <label>
+        <input 
+          type="checkbox" 
+          [checked]="delayEnabled()"
+          (change)="toggleDelay()">
+        Enable
+      </label>
+      
+      @if (delayEnabled()) {
+        <label>
+          Time:
+          <input 
+            type="range" 
+            min="0.01" 
+            max="2" 
+            step="0.01"
+            [value]="delayTime()"
+            (input)="onDelayTimeChange(+$any($event.target).value)">
+          <span>{{ delayTime().toFixed(2) }}s</span>
+        </label>
+
+        <label>
+          Feedback:
+          <input 
+            type="range" 
+            min="0" 
+            max="0.95" 
+            step="0.01"
+            [value]="delayFeedback()"
+            (input)="onDelayFeedbackChange(+$any($event.target).value)">
+          <span>{{ (delayFeedback() * 100).toFixed(0) }}%</span>
+        </label>
+
+        <label>
+          Mix:
+          <input 
+            type="range" 
+            min="0" 
+            max="1" 
+            step="0.01"
+            [value]="delayMix()"
+            (input)="onDelayMixChange(+$any($event.target).value)">
+          <span>{{ (delayMix() * 100).toFixed(0) }}%</span>
+        </label>
+      }
+    </div>
   </div>
 
   <osc-visualizer [analyser]="analyser"></osc-visualizer>
 
   <piano-keyboard
     [(currentOctave)]="currentOctave"
-    [sustainMode]="sustainMode()"
     (notePressed)="play($event.note, $event.octaveOffset)"
     (noteReleased)="stop()"
     (octaveChanged)="onOctaveChanged($event)"

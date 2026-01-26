@@ -7,9 +7,10 @@
 
 .white-key {
   width: 60px;
-  height: 200px;
+  height: 60px;
   background: white;
   border: 1px solid #000;
+  border-radius: 25%;
   margin: 0;
   cursor: pointer;
   flex-shrink: 0;
@@ -21,14 +22,16 @@
 }
 
 .black-key {
-  width: 40px;
-  height: 120px;
+  width: 60px;
+  height: 60px;
   background: #000;
-  border: 1px solid #000;
+  border: 1px solid #fff;
+  border-radius: 25%;
   cursor: pointer;
   flex-shrink: 0;
-  margin-left: -20px;
-  margin-right: -20px;
+  margin-block-start: -60px;
+  margin-inline-start: -29.5px;
+  margin-inline-end: -29.5px;
   z-index: 1;
 }
 
