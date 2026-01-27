@@ -34,6 +34,10 @@ export class Synth implements OnInit {
   protected delayTime = signal(0.3);
   protected delayFeedback = signal(0.3);
   protected delayMix = signal(0.3);
+  protected envelopeAttack = signal(0.005);
+  protected envelopeDecay = signal(0.1);
+  protected envelopeSustain = signal(0.7);
+  protected envelopeRelease = signal(0.5);
 
   private mixerGain!: GainNode;
   private oscillator2Gain!: GainNode;
@@ -208,7 +212,7 @@ export class Synth implements OnInit {
 
   protected toggleDelay(): void {
     this.delayEnabled.update(enabled => !enabled);    
-    this.delayController.setEnabled(this.delayEnabled());
+    this.delayController.setEnabled(this.delayEnabled(), this.delayMix());
   }
 
   protected onDelayTimeChange(time: number): void {
@@ -224,5 +228,25 @@ export class Synth implements OnInit {
   protected onDelayMixChange(mix: number): void {
     this.delayMix.set(mix);
     this.delayController.setMix(mix);
+  }
+
+  protected onEnvelopeAttackChange(attack: number): void {
+    this.envelopeAttack.set(attack);
+    this.envelopeController.setAttack(attack);
+  }
+
+  protected onEnvelopeDecayChange(decay: number): void {
+    this.envelopeDecay.set(decay);
+    this.envelopeController.setDecay(decay);
+  }
+
+  protected onEnvelopeSustainChange(sustain: number): void {
+    this.envelopeSustain.set(sustain);
+    this.envelopeController.setSustain(sustain);
+  }
+
+  protected onEnvelopeReleaseChange(release: number): void {
+    this.envelopeRelease.set(release);
+    this.envelopeController.setRelease(release);
   }
 }

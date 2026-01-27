@@ -86,6 +86,22 @@ export class EnvelopeController {
     if (params.release !== undefined) this.releaseTime = params.release;
   }
 
+  setAttack(attack: number): void {
+    this.attackTime = attack;
+  }
+
+  setDecay(decay: number): void {
+    this.decayTime = decay;
+  }
+
+  setSustain(sustain: number): void {
+    this.sustainLevel = sustain;
+  }
+
+  setRelease(release: number): void {
+    this.releaseTime = release;
+  }
+
   getParams(): Required<EnvelopeParams> {
     return {
       attack: this.attackTime,

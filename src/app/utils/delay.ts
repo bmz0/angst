@@ -125,13 +125,13 @@ export class DelayController {
     return this.wetGain.gain.value;
   }
 
-  setEnabled(enabled: boolean): void {
+  setEnabled(enabled: boolean, mix?: number): void {
     this.delayEnabled = enabled;
     const now = this.audioContext.currentTime;
     
     if (enabled) {
       // Set wet and dry gains based on current mix
-      const currentMix = this.getMix();
+      const currentMix = mix ?? this.getMix();
       //this.feedbackGain.connect(this.delayNode);
       this.inputSplitter.connect(this.delayNode);
       this.wetGain.gain.setValueAtTime(currentMix, now);

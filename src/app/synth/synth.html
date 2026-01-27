@@ -74,6 +74,58 @@
       }
     </div>
 
+    <div class="envelope-controls effect-section">
+      <h3>Envelope (ADSR)</h3>
+      
+      <label>
+        Attack:
+        <input 
+          type="range" 
+          min="0.001" 
+          max="0.5" 
+          step="0.001"
+          [value]="envelopeAttack()"
+          (input)="onEnvelopeAttackChange(+$any($event.target).value)">
+        <span>{{ (envelopeAttack() * 1000).toFixed(0) }}ms</span>
+      </label>
+
+      <label>
+        Decay:
+        <input 
+          type="range" 
+          min="0.001" 
+          max="2" 
+          step="0.001"
+          [value]="envelopeDecay()"
+          (input)="onEnvelopeDecayChange(+$any($event.target).value)">
+        <span>{{ (envelopeDecay() * 1000).toFixed(0) }}ms</span>
+      </label>
+
+      <label>
+        Sustain:
+        <input 
+          type="range" 
+          min="0" 
+          max="1" 
+          step="0.01"
+          [value]="envelopeSustain()"
+          (input)="onEnvelopeSustainChange(+$any($event.target).value)">
+        <span>{{ (envelopeSustain() * 100).toFixed(0) }}%</span>
+      </label>
+
+      <label>
+        Release:
+        <input 
+          type="range" 
+          min="0.001" 
+          max="5" 
+          step="0.001"
+          [value]="envelopeRelease()"
+          (input)="onEnvelopeReleaseChange(+$any($event.target).value)">
+        <span>{{ (envelopeRelease() * 1000).toFixed(0) }}ms</span>
+      </label>
+    </div>
+
     <div class="effect-section">
       <h3>Delay</h3>
       <label>
@@ -124,13 +176,15 @@
     </div>
   </div>
 
-  <osc-visualizer [analyser]="analyser"></osc-visualizer>
-
-  <piano-keyboard
-    [(currentOctave)]="currentOctave"
-    (notePressed)="play($event.note, $event.octaveOffset)"
-    (noteReleased)="stop()"
-    (octaveChanged)="onOctaveChanged($event)"
-    (oscillatorTypeToggled)="toggleOscillatorType()">
-  </piano-keyboard>
+  <div class="keyb-osc"> 
+    <piano-keyboard
+      [(currentOctave)]="currentOctave"
+      (notePressed)="play($event.note, $event.octaveOffset)"
+      (noteReleased)="stop()"
+      (octaveChanged)="onOctaveChanged($event)"
+      (oscillatorTypeToggled)="toggleOscillatorType()">
+    </piano-keyboard>
+  
+    <osc-visualizer [analyser]="analyser"></osc-visualizer>
+  </div>
 </div>

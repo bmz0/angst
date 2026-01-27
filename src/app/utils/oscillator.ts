@@ -19,7 +19,7 @@ export class OscillatorController {
   private readonly destination: AudioNode;
   private oscillatorType: OscillatorType = 'sine';
 
-  private readonly defaultGlideTime = 0.1;
+  private readonly defaultGlideTime = 0.0;
 
   constructor(config: OscillatorConfig) {
     this.audioContext = config.audioContext;

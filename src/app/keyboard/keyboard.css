@@ -1,6 +1,5 @@
 .piano-keyboard {
   display: flex;
-  height: 200px;
   margin: 20px 0;
   width: fit-content;
 }
@@ -12,6 +11,7 @@
   border: 1px solid #000;
   border-radius: 25%;
   margin: 0;
+  margin-block-start: 60px;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -29,7 +29,6 @@
   border-radius: 25%;
   cursor: pointer;
   flex-shrink: 0;
-  margin-block-start: -60px;
   margin-inline-start: -29.5px;
   margin-inline-end: -29.5px;
   z-index: 1;

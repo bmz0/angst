@@ -1,0 +1,32 @@
+image: node:20
+
+cache:
+  paths:
+    - node_modules/
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  script:
+    - npm ci
+    - npm run build -- --base-href=/angst/
+  artifacts:
+    paths:
+      - dist/angst/browser
+    expire_in: 1 hour
+  only:
+    - main
+
+pages:
+  stage: deploy
+  script:
+    - mkdir -p public
+    - cp -r dist/angst/browser/* public/
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
