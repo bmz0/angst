@@ -74,6 +74,66 @@
       }
     </div>
 
+    <div class="effect-section">
+      <h3>Filter</h3>
+      <label>
+        <input 
+          type="checkbox" 
+          [checked]="filterEnabled()"
+          (change)="toggleFilter()">
+        Enable
+      </label>
+      
+      @if (filterEnabled()) {
+        <label>
+          Type:
+          <select 
+            [value]="filterType()"
+            (change)="onFilterTypeChange($event)">
+            @for (type of filterTypes; track type) {
+              <option [value]="type">{{ type }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          Frequency:
+          <input 
+            type="range" 
+            min="20" 
+            max="20000" 
+            step="1"
+            [value]="filterFrequency()"
+            (input)="onFilterFrequencyChange(+$any($event.target).value)">
+          <span>{{ filterFrequency().toFixed(0) }}Hz</span>
+        </label>
+
+        <label>
+          Q:
+          <input 
+            type="range" 
+            min="0.0001" 
+            max="30" 
+            step="0.1"
+            [value]="filterQ()"
+            (input)="onFilterQChange(+$any($event.target).value)">
+          <span>{{ filterQ().toFixed(1) }}</span>
+        </label>
+
+        <label>
+          Gain:
+          <input 
+            type="range" 
+            min="-40" 
+            max="40" 
+            step="0.1"
+            [value]="filterGain()"
+            (input)="onFilterGainChange(+$any($event.target).value)">
+          <span>{{ filterGain().toFixed(1) }}dB</span>
+        </label>
+      }
+    </div>
+
     <div class="envelope-controls effect-section">
       <h3>Envelope (ADSR)</h3>
       

@@ -39,6 +39,23 @@
   background: #555;
 }
 
-.stop-button {
-  margin-top: 10px;
+.octave-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.octave-input {
+  width: 3rem;
+  text-align: center;
+  font-size: 1rem;
+  border: 1px solid cyan;
+  border-radius: 4px;
+  color: cyan;
+  background-color: #000;
+}
+
+.octave-input::-webkit-inner-spin-button,
+.octave-input::-webkit-outer-spin-button {
+  opacity: 1;
 }

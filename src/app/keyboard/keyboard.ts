@@ -42,6 +42,16 @@ export class Keyboard {
   protected activeNote?: string;
   private pressedKeys: PressedKey[] = [];
 
+  protected onOctaveInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = parseInt(input.value, 10);
+    
+    if (!isNaN(value) && value >= 0 && value <= 9) {
+      this.currentOctave.set(value);
+      this.octaveChanged.emit(value);
+    }
+  }
+
   protected readonly keys: KeyDefinition[] = [
     { note: 'C', isBlack: false, octaveOffset: 0 },
     { note: 'C#', isBlack: true, octaveOffset: 0 },

@@ -37,9 +37,10 @@ canvas {
 }
 
 .effects-controls {
-  display: flex;
+  display: grid;
   gap: 2rem;
-  flex-wrap: wrap;
+  grid-template-columns: repeat(auto-fill, minmax(max-content, 30%));
+  justify-content: center;
 }
 
 .effect-section {

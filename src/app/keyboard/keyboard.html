@@ -1,11 +1,26 @@
-<div class="piano-keyboard">
-  @for (key of keys; track key.note + key.octaveOffset) {
-    <button 
-      [class]="key.isBlack ? 'black-key' : 'white-key'" 
-      [class.active]="isActive(key.note, key.octaveOffset)" 
-      (pointerdown)="playNote(key.note, key.octaveOffset)" 
-      (pointerleave)="stopNote(key.note, key.octaveOffset)"
-      (pointerup)="stopNote(key.note, key.octaveOffset)">
-    </button>
-  }
+<div class="keyboard-container">
+  <div class="octave-control">
+      <label>
+        Octave:
+        <input 
+          type="number" 
+          min="0" 
+          max="9" 
+          [value]="currentOctave()"
+          (input)="onOctaveInputChange($event)"
+          class="octave-input">
+      </label>
+    </div>
+
+  <div class="piano-keyboard">
+    @for (key of keys; track key.note + key.octaveOffset) {
+      <button 
+        [class]="key.isBlack ? 'black-key' : 'white-key'" 
+        [class.active]="isActive(key.note, key.octaveOffset)" 
+        (pointerdown)="playNote(key.note, key.octaveOffset)" 
+        (pointerleave)="stopNote(key.note, key.octaveOffset)"
+        (pointerup)="stopNote(key.note, key.octaveOffset)">
+      </button>
+    }
+  </div>
 </div>

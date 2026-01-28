@@ -6,6 +6,7 @@ import { OscillatorController, OscillatorType } from '../utils/oscillator.js';
 import { EnvelopeController } from '../utils/envelope.js';
 import { DistortionController } from '../utils/distortion.js';
 import { DelayController } from '../utils/delay.js';
+import { FilterController } from '../utils/filter.js';
 import { getFrequency } from '../utils/common.js';
 import { AudioContextService } from '../services/audio-context.service.js';
 
@@ -26,7 +27,13 @@ export class Synth implements OnInit {
   protected oscillator1Type = signal<OscillatorType>('sine');
   protected oscillator2Type = signal<OscillatorType>('sine');
   protected oscillator2Amount = signal(0);
+  protected oscillator2SubOctave = signal(true);
   protected glideTime = signal(0);
+  protected filterEnabled = signal(false);
+  protected filterType = signal<BiquadFilterType>('lowpass');
+  protected filterFrequency = signal(1000);
+  protected filterQ = signal(1);
+  protected filterGain = signal(0);
   protected distortionEnabled = signal(false);
   protected distortionAmount = signal(0);
   protected distortionFold = signal(false);
@@ -39,8 +46,20 @@ export class Synth implements OnInit {
   protected envelopeSustain = signal(0.7);
   protected envelopeRelease = signal(0.5);
 
+  protected readonly filterTypes: BiquadFilterType[] = [
+    'lowpass',
+    'highpass',
+    'bandpass',
+    'lowshelf',
+    'highshelf',
+    'peaking',
+    'notch',
+    'allpass'
+  ];
+
   private mixerGain!: GainNode;
   private oscillator2Gain!: GainNode;
+  private filterController!: FilterController;
   private distortionController!: DistortionController;
   private delayController!: DelayController;
   private oscillatorController1!: OscillatorController;
@@ -59,6 +78,7 @@ export class Synth implements OnInit {
       this.oscillatorController1?.disconnect();
       this.oscillatorController2?.disconnect();
       this.envelopeController?.disconnect();
+      this.filterController?.disconnect();
       this.distortionController?.disconnect();
       this.delayController?.disconnect();
       this.oscillator2Gain?.disconnect();
@@ -92,16 +112,27 @@ export class Synth implements OnInit {
       release: 0.5
     });
 
-    // Create distortion (connects to envelope)
-    this.distortionController = new DistortionController({
+    // Create filter (connects to envelope)
+    this.filterController = new FilterController({
       audioContext: ctx,
       destination: this.envelopeController.getInput(),
+      type: this.filterType(),
+      frequency: this.filterFrequency(),
+      Q: this.filterQ(),
+      gain: this.filterGain(),
+      enabled: this.filterEnabled()
+    });
+
+    // Create distortion (connects to filter)
+    this.distortionController = new DistortionController({
+      audioContext: ctx,
+      destination: this.filterController.getInput(),
       type: 'soft',
       amount: 0,
       enabled: false
     });
 
-    // Create mixer gain node
+    // Create mixer gain node (connects to distortion)
     this.mixerGain = ctx.createGain();
     this.mixerGain.gain.value = 1;
     this.mixerGain.connect(this.distortionController.getInput());
@@ -140,7 +171,8 @@ export class Synth implements OnInit {
     const frequency = getFrequency(scientificNotation);
 
     this.oscillatorController1.play({ frequency, glideTime: this.glideTime() });
-    this.oscillatorController2.play({ frequency: frequency / 2, glideTime: this.glideTime() });
+    const osc2Frequency = this.oscillator2SubOctave() ? frequency / 2 : frequency;
+    this.oscillatorController2.play({ frequency: osc2Frequency, glideTime: this.glideTime() });
     
     this.envelopeController.trigger();
 
@@ -193,6 +225,37 @@ export class Synth implements OnInit {
     this.oscillator2Amount.set(amount);
     this.oscillator2Gain.gain.setValueAtTime(amount, now);
     this.mixerGain.gain.setValueAtTime(newMixerGain, now);
+  }
+
+  protected toggleOscillator2SubOctave(): void {
+    this.oscillator2SubOctave.update(enabled => !enabled);
+  }
+
+  protected toggleFilter(): void {
+    this.filterEnabled.update(enabled => !enabled);
+    this.filterController.setEnabled(this.filterEnabled());
+  }
+
+  protected onFilterTypeChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const type = select.value as BiquadFilterType;
+    this.filterType.set(type);
+    this.filterController.setType(type);
+  }
+
+  protected onFilterFrequencyChange(frequency: number): void {
+    this.filterFrequency.set(frequency);
+    this.filterController.setFrequency(frequency);
+  }
+
+  protected onFilterQChange(q: number): void {
+    this.filterQ.set(q);
+    this.filterController.setQ(q);
+  }
+
+  protected onFilterGainChange(gain: number): void {
+    this.filterGain.set(gain);
+    this.filterController.setGain(gain);
   }
 
   protected toggleDistortion(): void {

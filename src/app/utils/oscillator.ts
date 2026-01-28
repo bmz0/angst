@@ -13,7 +13,8 @@ export interface PlaybackOptions {
 }
 
 export class OscillatorController {
-  private oscillator?: OscillatorNode;
+  private oscillatorNode: OscillatorNode;
+  private gainNode: GainNode;
   private currentFrequency?: number;
   private readonly audioContext: AudioContext;
   private readonly destination: AudioNode;
@@ -25,35 +26,37 @@ export class OscillatorController {
     this.audioContext = config.audioContext;
     this.destination = config.destination;
     this.oscillatorType = config.type;
+
+    this.oscillatorNode = this.audioContext.createOscillator();
+    this.oscillatorNode.type = config.type;
+    this.oscillatorNode.frequency.value = config.frequency;
+
+    this.gainNode = this.audioContext.createGain();
+    this.gainNode.gain.value = 0; // Silent until played
+
+    this.oscillatorNode.connect(this.gainNode);
+    this.gainNode.connect(config.destination);
+    this.oscillatorNode.start(); // Start immediately, control via gain
   }
 
   play(options: PlaybackOptions): void {
     const now = this.audioContext.currentTime;
     const { frequency, glideTime = this.defaultGlideTime } = options;
 
-    if (!this.oscillator) {
-      this.createOscillator(frequency);
-    } else if (this.currentFrequency !== frequency) {
-      this.oscillator.frequency.linearRampToValueAtTime(frequency, now + glideTime);
-    }
+    // Just modulate frequency, oscillator keeps running
+    this.oscillatorNode.frequency.linearRampToValueAtTime(frequency, now + glideTime);
+    this.gainNode.gain.setValueAtTime(1, now);
 
     this.currentFrequency = frequency;
   }
 
   stop(): void {
-    if (!this.oscillator) return;
-
-    this.oscillator.stop();
-    this.oscillator.disconnect();
-    this.oscillator = undefined;
-    this.currentFrequency = undefined;
+    this.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
   }
 
   setType(type: OscillatorType): void {
     this.oscillatorType = type;
-    if (this.oscillator) {
-      this.oscillator.type = type;
-    }
+    this.oscillatorNode.type = type;
   }
 
   getType(): OscillatorType {
@@ -61,7 +64,7 @@ export class OscillatorController {
   }
 
   isPlaying(): boolean {
-    return this.oscillator !== undefined;
+    return this.gainNode.gain.value > 0;
   }
 
   getCurrentFrequency(): number | undefined {
@@ -70,13 +73,5 @@ export class OscillatorController {
 
   disconnect(): void {
     this.stop();
-  }
-
-  private createOscillator(frequency: number): void {
-    this.oscillator = this.audioContext.createOscillator();
-    this.oscillator.type = this.oscillatorType;
-    this.oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
-    this.oscillator.connect(this.destination);
-    this.oscillator.start();
   }
 }
