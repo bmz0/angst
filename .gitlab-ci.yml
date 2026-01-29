@@ -12,7 +12,7 @@ build:
   stage: build
   script:
     - npm ci
-    - npm run build -- --base-href=/angst/
+    - npm run build
   artifacts:
     paths:
       - dist/angst/browser
