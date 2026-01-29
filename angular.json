@@ -24,6 +24,7 @@
                 "input": "public"
               }
             ],
+            "outputMode": "static",
             "styles": [
               "src/styles.css"
             ]
@@ -42,7 +43,6 @@
                   "maximumError": "8kB"
                 }
               ],
-              "baseHref": "/angst/",
               "outputHashing": "all"
             },
             "development": {
