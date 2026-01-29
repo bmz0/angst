@@ -100,8 +100,8 @@
           Frequency:
           <input 
             type="range" 
-            min="20" 
-            max="20000" 
+            min="0" 
+            max="12000" 
             step="1"
             [value]="filterFrequency()"
             (input)="onFilterFrequencyChange(+$any($event.target).value)">

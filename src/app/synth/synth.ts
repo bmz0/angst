@@ -25,8 +25,8 @@ export class Synth implements OnInit {
   protected analyser!: AnalyserNode;
   protected currentOctave = signal(4);
   protected oscillator1Type = signal<OscillatorType>('sine');
-  protected oscillator2Type = signal<OscillatorType>('sine');
-  protected oscillator2Amount = signal(0);
+  protected oscillator2Type = signal<OscillatorType>('square');
+  protected oscillator2Amount = signal(1);
   protected oscillator2SubOctave = signal(true);
   protected glideTime = signal(0);
   protected filterEnabled = signal(false);
@@ -90,7 +90,7 @@ export class Synth implements OnInit {
     const ctx = this.audioContext.getContext()!;
 
     this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 2048;
+    this.analyser.fftSize = 512;
 
     // Create delay (at end of chain before analyser)
     this.delayController = new DelayController({
@@ -134,7 +134,7 @@ export class Synth implements OnInit {
 
     // Create mixer gain node (connects to distortion)
     this.mixerGain = ctx.createGain();
-    this.mixerGain.gain.value = 1;
+    this.mixerGain.gain.value = 0.5;
     this.mixerGain.connect(this.distortionController.getInput());
 
     // Create oscillator 2 gain node

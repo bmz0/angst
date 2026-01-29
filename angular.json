@@ -42,6 +42,7 @@
                   "maximumError": "8kB"
                 }
               ],
+              "baseHref": "/angst/",
               "outputHashing": "all"
             },
             "development": {

@@ -6,6 +6,10 @@ canvas {
   width: 400px;
 }
 
+input[type="range"] {
+  vertical-align: middle;
+}
+
 .synth-container {
   display: flex;
   flex-direction: column;

@@ -12,10 +12,8 @@ export class App {
   protected readonly title = signal('angst');
   protected readonly audioContextService = inject(AudioContextService);
 
-  constructor() {
-    afterNextRender(() => {
-      this.audioContextService.initialize();
-    });
+  protected initAudioContext(): void {
+    this.audioContextService.initialize();
   }
 
   protected resumeAudioContext(): void {
