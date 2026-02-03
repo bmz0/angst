@@ -1,10 +1,10 @@
 /**
  * Creates a soft clipping/overdrive distortion curve using arctangent-like waveshaping.
  * @param amount - Distortion intensity (0 = clean, higher values = more distortion)
- * @param samples - Number of samples in the curve (default: 44100)
+ * @param samples - Number of samples in the curve (default: 48000)
  * @returns Float32Array suitable for WaveShaperNode.curve
  */
-export function makeSoftClipCurve(amount: number, samples: number = 44100) {
+export function makeSoftClipCurve(amount: number, samples: number = 48000) {
   const curve = new Float32Array(samples);
   const deg = Math.PI / 180;
   let maxValue = 0;
@@ -34,7 +34,7 @@ export function makeSoftClipCurve(amount: number, samples: number = 44100) {
  * @param samples - Number of samples in the transfer curve
  * @returns Float32Array representing the waveshaper curve
  */
-export function makeHardClipCurve(threshold: number = 0.5, samples: number = 44100) {
+export function makeHardClipCurve(threshold: number = 0.5, samples: number = 48000) {
   const curve = new Float32Array(samples);
   
   // Clamp threshold between 0.1 and 1.0 to prevent extreme values
@@ -71,10 +71,10 @@ export function makeHardClipCurve(threshold: number = 0.5, samples: number = 441
 
 /**
  * Creates a bypass curve (linear pass-through, no distortion).
- * @param samples - Number of samples in the curve (default: 44100)
+ * @param samples - Number of samples in the curve (default: 48000)
  * @returns Float32Array with identity mapping
  */
-export function makeBypassCurve(samples: number = 44100) {
+export function makeBypassCurve(samples: number = 48000) {
   const curve = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
     curve[i] = (i * 2) / samples - 1;

@@ -24,10 +24,11 @@ export class Visualizer implements AfterViewInit, OnDestroy {
 
   public start(): void {
     if (!this.analyser || !this.canvasContext) return;
-
+    
     const canvas = this.canvasRef.nativeElement;
-
+    
     const draw = () => {
+      if (this.animationId) cancelAnimationFrame(this.animationId)
       this.animationId = requestAnimationFrame(draw);
       drawWaveform(this.analyser()!, canvas, this.canvasContext!);
     };

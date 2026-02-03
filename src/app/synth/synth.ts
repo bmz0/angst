@@ -33,7 +33,6 @@ export class Synth implements OnInit {
   protected filterType = signal<BiquadFilterType>('lowpass');
   protected filterFrequency = signal(1000);
   protected filterQ = signal(1);
-  protected filterGain = signal(0);
   protected distortionEnabled = signal(false);
   protected distortionAmount = signal(0);
   protected distortionFold = signal(false);
@@ -49,12 +48,7 @@ export class Synth implements OnInit {
   protected readonly filterTypes: BiquadFilterType[] = [
     'lowpass',
     'highpass',
-    'bandpass',
-    'lowshelf',
-    'highshelf',
-    'peaking',
-    'notch',
-    'allpass'
+    'bandpass'
   ];
 
   private mixerGain!: GainNode;
@@ -119,7 +113,6 @@ export class Synth implements OnInit {
       type: this.filterType(),
       frequency: this.filterFrequency(),
       Q: this.filterQ(),
-      gain: this.filterGain(),
       enabled: this.filterEnabled()
     });
 
@@ -251,11 +244,6 @@ export class Synth implements OnInit {
   protected onFilterQChange(q: number): void {
     this.filterQ.set(q);
     this.filterController.setQ(q);
-  }
-
-  protected onFilterGainChange(gain: number): void {
-    this.filterGain.set(gain);
-    this.filterController.setGain(gain);
   }
 
   protected toggleDistortion(): void {
