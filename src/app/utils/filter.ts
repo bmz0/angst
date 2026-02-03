@@ -5,6 +5,7 @@ export interface FilterConfig {
   frequency?: number;
   Q?: number;
   enabled?: boolean;
+  keyboardTracking?: number; // 0 = no tracking, 1 = full tracking
 }
 
 export class FilterController {
@@ -16,6 +17,8 @@ export class FilterController {
   private mixerNode: GainNode;
   private readonly audioContext: AudioContext;
   private enabled: boolean;
+  private baseFrequency: number;
+  private keyboardTracking: number;
 
   // Compressor constants
   private readonly COMPRESSOR_THRESHOLD = -24; // dB
@@ -27,6 +30,8 @@ export class FilterController {
   constructor(config: FilterConfig) {
     this.audioContext = config.audioContext;
     this.enabled = config.enabled ?? false;
+    this.baseFrequency = config.frequency ?? 1000;
+    this.keyboardTracking = config.keyboardTracking ?? 0;
 
     // Create input node
     this.inputNode = this.audioContext.createGain();
@@ -35,7 +40,7 @@ export class FilterController {
     // Create filter
     this.filterNode = this.audioContext.createBiquadFilter();
     this.filterNode.type = config.type ?? 'lowpass';
-    this.filterNode.frequency.value = config.frequency ?? 1000;
+    this.filterNode.frequency.value = this.baseFrequency;
     this.filterNode.Q.value = config.Q ?? 1;
 
     // Create compressor for wet signal only
@@ -80,6 +85,7 @@ export class FilterController {
   }
 
   setFrequency(frequency: number): void {
+    this.baseFrequency = frequency;
     const now = this.audioContext.currentTime;
     this.filterNode.frequency.setValueAtTime(frequency, now);
   }
@@ -87,6 +93,24 @@ export class FilterController {
   setQ(q: number): void {
     const now = this.audioContext.currentTime;
     this.filterNode.Q.setValueAtTime(q, now);
+  }
+
+  setKeyboardTracking(amount: number): void {
+    this.keyboardTracking = Math.max(0, Math.min(1, amount));
+  }
+
+  trackNote(noteFrequency: number): void {
+    if (this.keyboardTracking === 0) return;
+
+    const now = this.audioContext.currentTime;
+    // Calculate tracked frequency: baseFreq + (noteFreq - baseFreq) * tracking
+    const trackedFrequency = this.baseFrequency + 
+      (noteFrequency - this.baseFrequency) * this.keyboardTracking;
+    
+    // Clamp to valid filter range (20Hz - 20kHz)
+    const clampedFrequency = Math.max(20, Math.min(20000, trackedFrequency));
+    
+    this.filterNode.frequency.setValueAtTime(clampedFrequency, now);
   }
 
   private updateBypass(): void {

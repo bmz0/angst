@@ -44,6 +44,7 @@ export class Synth implements OnInit {
   protected envelopeDecay = signal(0.1);
   protected envelopeSustain = signal(0.7);
   protected envelopeRelease = signal(0.5);
+  protected filterKeyboardTracking = signal(0);
 
   protected readonly filterTypes: BiquadFilterType[] = [
     'lowpass',
@@ -113,7 +114,8 @@ export class Synth implements OnInit {
       type: this.filterType(),
       frequency: this.filterFrequency(),
       Q: this.filterQ(),
-      enabled: this.filterEnabled()
+      enabled: this.filterEnabled(),
+      keyboardTracking: this.filterKeyboardTracking()
     });
 
     // Create distortion (connects to filter)
@@ -166,6 +168,9 @@ export class Synth implements OnInit {
     this.oscillatorController1.play({ frequency, glideTime: this.glideTime() });
     const osc2Frequency = this.oscillator2SubOctave() ? frequency / 2 : frequency;
     this.oscillatorController2.play({ frequency: osc2Frequency, glideTime: this.glideTime() });
+    
+    // Update filter frequency based on keyboard tracking
+    this.filterController.trackNote(frequency);
     
     this.envelopeController.trigger();
 
@@ -299,5 +304,10 @@ export class Synth implements OnInit {
   protected onEnvelopeReleaseChange(release: number): void {
     this.envelopeRelease.set(release);
     this.envelopeController.setRelease(release);
+  }
+
+  protected onFilterKeyboardTrackingChange(amount: number): void {
+    this.filterKeyboardTracking.set(amount);
+    this.filterController.setKeyboardTracking(amount);
   }
 }
