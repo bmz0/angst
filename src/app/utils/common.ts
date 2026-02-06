@@ -32,3 +32,8 @@ export function getFrequency(note: string): number {
   // Apply equal temperament formula: f = A4_FREQUENCY * 2^(n/12)
   return A4_FREQUENCY * Math.pow(2, stepsFromA4 / 12);
 }
+
+export function getFrequencyWithOffset(baseFrequency: number, semitones: number): number {
+  // Each semitone is 2^(1/12) ratio
+  return baseFrequency * Math.pow(2, semitones / 12);
+}

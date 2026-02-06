@@ -21,7 +21,7 @@ export class FilterController {
   private keyboardTracking: number;
 
   // Compressor constants
-  private readonly COMPRESSOR_THRESHOLD = -24; // dB
+  private readonly COMPRESSOR_THRESHOLD = -6; // dB
   private readonly COMPRESSOR_KNEE = 30; // dB
   private readonly COMPRESSOR_RATIO = 12; // :1
   private readonly COMPRESSOR_ATTACK = 0.003; // seconds
@@ -31,7 +31,7 @@ export class FilterController {
     this.audioContext = config.audioContext;
     this.enabled = config.enabled ?? false;
     this.baseFrequency = config.frequency ?? 1000;
-    this.keyboardTracking = config.keyboardTracking ?? 0;
+    this.keyboardTracking = config.keyboardTracking ?? 0.5;
 
     // Create input node
     this.inputNode = this.audioContext.createGain();
@@ -107,10 +107,7 @@ export class FilterController {
     const trackedFrequency = this.baseFrequency + 
       (noteFrequency - this.baseFrequency) * this.keyboardTracking;
     
-    // Clamp to valid filter range (20Hz - 20kHz)
-    const clampedFrequency = Math.max(20, Math.min(20000, trackedFrequency));
-    
-    this.filterNode.frequency.setValueAtTime(clampedFrequency, now);
+    this.filterNode.frequency.setValueAtTime(trackedFrequency, now);
   }
 
   private updateBypass(): void {

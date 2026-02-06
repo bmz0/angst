@@ -7,7 +7,8 @@ import { EnvelopeController } from '../utils/envelope.js';
 import { DistortionController } from '../utils/distortion.js';
 import { DelayController } from '../utils/delay.js';
 import { FilterController } from '../utils/filter.js';
-import { getFrequency } from '../utils/common.js';
+import { ArpeggiatorController } from '../utils/arpeggiator.js';
+import { getFrequency, getFrequencyWithOffset } from '../utils/common.js';
 import { AudioContextService } from '../services/audio-context.service.js';
 
 @Component({
@@ -44,7 +45,10 @@ export class Synth implements OnInit {
   protected envelopeDecay = signal(0.1);
   protected envelopeSustain = signal(0.7);
   protected envelopeRelease = signal(0.5);
-  protected filterKeyboardTracking = signal(0);
+  protected filterKeyboardTracking = signal(0.5);
+  protected arpeggiatorEnabled = signal(false);
+  protected arpeggiatorTempo = signal(120);
+  protected arpeggiatorPattern = signal('037');
 
   protected readonly filterTypes: BiquadFilterType[] = [
     'lowpass',
@@ -60,7 +64,9 @@ export class Synth implements OnInit {
   private oscillatorController1!: OscillatorController;
   private oscillatorController2!: OscillatorController;
   private envelopeController!: EnvelopeController;
+  private arpeggiatorController!: ArpeggiatorController;
   private releaseTimeoutId?: number;
+  private currentBaseFrequency?: number;
   private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
@@ -76,6 +82,7 @@ export class Synth implements OnInit {
       this.filterController?.disconnect();
       this.distortionController?.disconnect();
       this.delayController?.disconnect();
+      this.arpeggiatorController?.stop();
       this.oscillator2Gain?.disconnect();
       this.mixerGain?.disconnect();
     });
@@ -153,6 +160,12 @@ export class Synth implements OnInit {
       frequency: 220,
       destination: this.oscillator2Gain
     });
+
+    // Create arpeggiator
+    this.arpeggiatorController = new ArpeggiatorController({
+      tempo: this.arpeggiatorTempo(),
+      pattern: this.arpeggiatorPattern()
+    });
   }
 
   protected play(note: string, octaveOffset: number = 0): void {
@@ -163,7 +176,27 @@ export class Synth implements OnInit {
 
     const octave = this.currentOctave() + octaveOffset;
     const scientificNotation = `${note}${octave}`;
-    const frequency = getFrequency(scientificNotation);
+    const baseFrequency = getFrequency(scientificNotation);
+    
+    this.currentBaseFrequency = baseFrequency;
+
+    if (this.arpeggiatorEnabled()) {
+      // Start arpeggiator
+      this.arpeggiatorController.start((semitoneOffset) => {
+        this.playFrequency(baseFrequency, semitoneOffset);
+      });
+    } else {
+      // Play single note
+      this.playFrequency(baseFrequency, 0);
+    }
+
+    if (this.oscillatorController1.isPlaying() && this.visualizerRef) {
+      this.visualizerRef.start();
+    }
+  }
+
+  private playFrequency(baseFrequency: number, semitoneOffset: number): void {
+    const frequency = getFrequencyWithOffset(baseFrequency, semitoneOffset);
 
     this.oscillatorController1.play({ frequency, glideTime: this.glideTime() });
     const osc2Frequency = this.oscillator2SubOctave() ? frequency / 2 : frequency;
@@ -173,13 +206,10 @@ export class Synth implements OnInit {
     this.filterController.trackNote(frequency);
     
     this.envelopeController.trigger();
-
-    if (this.oscillatorController1.isPlaying() && this.visualizerRef) {
-      this.visualizerRef.start();
-    }
   }
 
   protected stop(): void {
+    this.arpeggiatorController.stop();
     this.envelopeController.release();
     
     const releaseTime = this.envelopeController.getParams().release;
@@ -309,5 +339,28 @@ export class Synth implements OnInit {
   protected onFilterKeyboardTrackingChange(amount: number): void {
     this.filterKeyboardTracking.set(amount);
     this.filterController.setKeyboardTracking(amount);
+  }
+
+  protected toggleArpeggiator(): void {
+    this.arpeggiatorEnabled.update(enabled => !enabled);
+    
+    // Stop arpeggiator if disabled while playing
+    if (!this.arpeggiatorEnabled() && this.arpeggiatorController.isRunning()) {
+      this.arpeggiatorController.stop();
+      // Retrigger current base note
+      if (this.currentBaseFrequency) {
+        this.playFrequency(this.currentBaseFrequency, 0);
+      }
+    }
+  }
+
+  protected onArpeggiatorTempoChange(tempo: number): void {
+    this.arpeggiatorTempo.set(tempo);
+    this.arpeggiatorController.setTempo(tempo);
+  }
+
+  protected onArpeggiatorPatternChange(pattern: string): void {
+    this.arpeggiatorPattern.set(pattern);
+    this.arpeggiatorController.setPattern(pattern);
   }
 }
