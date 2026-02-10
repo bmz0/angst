@@ -2,12 +2,9 @@ import { Component, OnInit, ViewChild, signal, DestroyRef, inject } from '@angul
 import { Keyboard } from '../keyboard/keyboard.js';
 import { Visualizer } from '../visualizer/visualizer.js';
 import { OscillatorSelector } from '../oscillator-selector/oscillator-selector.js';
-import { OscillatorController, OscillatorType } from '../utils/oscillator.js';
-import { EnvelopeController } from '../utils/envelope.js';
-import { DistortionController } from '../utils/distortion.js';
-import { DelayController } from '../utils/delay.js';
-import { FilterController } from '../utils/filter.js';
+import { OscillatorType } from '../utils/oscillator.js';
 import { ArpeggiatorController } from '../utils/arpeggiator.js';
+import { SynthEngine } from './synthEngine.js';
 import { getFrequency, getFrequencyWithOffset } from '../utils/common.js';
 import { AudioContextService } from '../services/audio-context.service.js';
 
@@ -29,6 +26,7 @@ export class Synth implements OnInit {
   protected oscillator2Type = signal<OscillatorType>('square');
   protected oscillator2Amount = signal(1);
   protected oscillator2SubOctave = signal(true);
+  protected oscillator2Invert = signal(false);
   protected glideTime = signal(0);
   protected filterEnabled = signal(false);
   protected filterType = signal<BiquadFilterType>('lowpass');
@@ -47,8 +45,9 @@ export class Synth implements OnInit {
   protected envelopeRelease = signal(0.5);
   protected filterKeyboardTracking = signal(0.5);
   protected arpeggiatorEnabled = signal(false);
-  protected arpeggiatorTempo = signal(120);
+  protected arpeggiatorTempo = signal(300);
   protected arpeggiatorPattern = signal('037');
+  protected activeVisualizerTimeout: number | null = null;
 
   protected readonly filterTypes: BiquadFilterType[] = [
     'lowpass',
@@ -56,16 +55,8 @@ export class Synth implements OnInit {
     'bandpass'
   ];
 
-  private mixerGain!: GainNode;
-  private oscillator2Gain!: GainNode;
-  private filterController!: FilterController;
-  private distortionController!: DistortionController;
-  private delayController!: DelayController;
-  private oscillatorController1!: OscillatorController;
-  private oscillatorController2!: OscillatorController;
-  private envelopeController!: EnvelopeController;
+  private synthEngine!: SynthEngine;
   private arpeggiatorController!: ArpeggiatorController;
-  private releaseTimeoutId?: number;
   private currentBaseFrequency?: number;
   private readonly destroyRef = inject(DestroyRef);
 
@@ -73,18 +64,8 @@ export class Synth implements OnInit {
     this.init();
 
     this.destroyRef.onDestroy(() => {
-      if (this.releaseTimeoutId !== undefined) {
-        clearTimeout(this.releaseTimeoutId);
-      }
-      this.oscillatorController1?.disconnect();
-      this.oscillatorController2?.disconnect();
-      this.envelopeController?.disconnect();
-      this.filterController?.disconnect();
-      this.distortionController?.disconnect();
-      this.delayController?.disconnect();
       this.arpeggiatorController?.stop();
-      this.oscillator2Gain?.disconnect();
-      this.mixerGain?.disconnect();
+      this.synthEngine?.disconnect();
     });
   }
 
@@ -93,72 +74,33 @@ export class Synth implements OnInit {
 
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 512;
-
-    // Create delay (at end of chain before analyser)
-    this.delayController = new DelayController({
-      audioContext: ctx,
-      destination: this.analyser,
-      delayTime: 0.3,
-      feedback: 0.3,
-      mix: 0.3,
-      enabled: this.delayEnabled()
-    });
-
-    // Create envelope (connects to delay)
-    this.envelopeController = new EnvelopeController({
-      audioContext: ctx,
-      destination: this.delayController.getInput(),
-      attack: 0.005,
-      decay: 0.1,
-      sustain: 0.7,
-      release: 0.5
-    });
-
-    // Create filter (connects to envelope)
-    this.filterController = new FilterController({
-      audioContext: ctx,
-      destination: this.envelopeController.getInput(),
-      type: this.filterType(),
-      frequency: this.filterFrequency(),
-      Q: this.filterQ(),
-      enabled: this.filterEnabled(),
-      keyboardTracking: this.filterKeyboardTracking()
-    });
-
-    // Create distortion (connects to filter)
-    this.distortionController = new DistortionController({
-      audioContext: ctx,
-      destination: this.filterController.getInput(),
-      type: 'soft',
-      amount: 0,
-      enabled: false
-    });
-
-    // Create mixer gain node (connects to distortion)
-    this.mixerGain = ctx.createGain();
-    this.mixerGain.gain.value = 0.5;
-    this.mixerGain.connect(this.distortionController.getInput());
-
-    // Create oscillator 2 gain node
-    this.oscillator2Gain = ctx.createGain();
-    this.oscillator2Gain.gain.value = this.oscillator2Amount();
-    this.oscillator2Gain.connect(this.mixerGain);
-
     this.analyser.connect(ctx.destination);
 
-    // Create oscillators
-    this.oscillatorController1 = new OscillatorController({
+    // Create synth engine
+    this.synthEngine = new SynthEngine({
       audioContext: ctx,
-      type: this.oscillator1Type(),
-      frequency: 440,
-      destination: this.mixerGain
-    });
-
-    this.oscillatorController2 = new OscillatorController({
-      audioContext: ctx,
-      type: this.oscillator2Type(),
-      frequency: 220,
-      destination: this.oscillator2Gain
+      destination: this.analyser,
+      oscillator1Type: this.oscillator1Type(),
+      oscillator2Type: this.oscillator2Type(),
+      oscillator2Amount: this.oscillator2Amount(),
+      oscillator2SubOctave: this.oscillator2SubOctave(),
+      glideTime: this.glideTime(),
+      filterEnabled: this.filterEnabled(),
+      filterType: this.filterType(),
+      filterFrequency: this.filterFrequency(),
+      filterQ: this.filterQ(),
+      filterKeyboardTracking: this.filterKeyboardTracking(),
+      distortionEnabled: this.distortionEnabled(),
+      distortionAmount: this.distortionAmount(),
+      distortionFold: this.distortionFold(),
+      delayEnabled: this.delayEnabled(),
+      delayTime: this.delayTime(),
+      delayFeedback: this.delayFeedback(),
+      delayMix: this.delayMix(),
+      envelopeAttack: this.envelopeAttack(),
+      envelopeDecay: this.envelopeDecay(),
+      envelopeSustain: this.envelopeSustain(),
+      envelopeRelease: this.envelopeRelease()
     });
 
     // Create arpeggiator
@@ -169,11 +111,6 @@ export class Synth implements OnInit {
   }
 
   protected play(note: string, octaveOffset: number = 0): void {
-    if (this.releaseTimeoutId !== undefined) {
-      clearTimeout(this.releaseTimeoutId);
-      this.releaseTimeoutId = undefined;
-    }
-
     const octave = this.currentOctave() + octaveOffset;
     const scientificNotation = `${note}${octave}`;
     const baseFrequency = getFrequency(scientificNotation);
@@ -181,44 +118,35 @@ export class Synth implements OnInit {
     this.currentBaseFrequency = baseFrequency;
 
     if (this.arpeggiatorEnabled()) {
-      // Start arpeggiator
       this.arpeggiatorController.start((semitoneOffset) => {
         this.playFrequency(baseFrequency, semitoneOffset);
       });
     } else {
-      // Play single note
       this.playFrequency(baseFrequency, 0);
     }
 
-    if (this.oscillatorController1.isPlaying() && this.visualizerRef) {
+    if (this.synthEngine.isPlaying() && this.visualizerRef) {
+      if (this.activeVisualizerTimeout) {
+        clearTimeout(this.activeVisualizerTimeout);
+        this.activeVisualizerTimeout = null;
+      }
       this.visualizerRef.start();
     }
   }
 
   private playFrequency(baseFrequency: number, semitoneOffset: number): void {
     const frequency = getFrequencyWithOffset(baseFrequency, semitoneOffset);
-
-    this.oscillatorController1.play({ frequency, glideTime: this.glideTime() });
-    const osc2Frequency = this.oscillator2SubOctave() ? frequency / 2 : frequency;
-    this.oscillatorController2.play({ frequency: osc2Frequency, glideTime: this.glideTime() });
-    
-    // Update filter frequency based on keyboard tracking
-    this.filterController.trackNote(frequency);
-    
-    this.envelopeController.trigger();
+    this.synthEngine.play(frequency);
   }
 
   protected stop(): void {
     this.arpeggiatorController.stop();
-    this.envelopeController.release();
+    this.synthEngine.stop();
     
-    const releaseTime = this.envelopeController.getParams().release;
-    this.releaseTimeoutId = window.setTimeout(() => {
-      this.oscillatorController1.stop();
-      this.oscillatorController2.stop();
+    this.activeVisualizerTimeout = setTimeout(() => {
       this.visualizerRef?.stop();
-      this.releaseTimeoutId = undefined;
-    }, releaseTime * 1000);
+      this.activeVisualizerTimeout = null;
+    }, 3000);
   }
 
   protected onOctaveChanged(octave: number): void {
@@ -230,124 +158,130 @@ export class Synth implements OnInit {
     const currentIndex = types.indexOf(this.oscillator1Type());
     const nextType = types[(currentIndex + 1) % types.length];
     this.oscillator1Type.set(nextType);
-    this.oscillatorController1.setType(nextType);
+    this.synthEngine.setParameters({ oscillator1Type: nextType });
   }
 
   protected onOscillator1TypeSelected(type: OscillatorType): void {
     this.oscillator1Type.set(type);
-    this.oscillatorController1.setType(type);
+    this.synthEngine.setParameters({ oscillator1Type: type });
   }
 
   protected onOscillator2TypeSelected(type: OscillatorType): void {
     this.oscillator2Type.set(type);
-    this.oscillatorController2.setType(type);
+    this.synthEngine.setParameters({ oscillator2Type: type });
   }
 
   protected onGlideTimeChange(time: number): void {
     this.glideTime.set(time);
+    this.synthEngine.setParameters({ glideTime: time });
   }
 
   protected onOscillator2AmountChange(amount: number): void {
-    const now = this.audioContext.getContext()!.currentTime;
-    const newMixerGain = 1 - (amount / 2);
     this.oscillator2Amount.set(amount);
-    this.oscillator2Gain.gain.setValueAtTime(amount, now);
-    this.mixerGain.gain.setValueAtTime(newMixerGain, now);
+    this.synthEngine.setParameters({ oscillator2Amount: amount });
   }
 
   protected toggleOscillator2SubOctave(): void {
     this.oscillator2SubOctave.update(enabled => !enabled);
+    this.synthEngine.setParameters({ oscillator2SubOctave: this.oscillator2SubOctave() });
+  }
+
+  protected onOscillator2InvertChange(): void {
+    this.oscillator2Invert.update(invert => !invert);
+    this.synthEngine.setParameters({ oscillator2Invert: this.oscillator2Invert()});
   }
 
   protected toggleFilter(): void {
     this.filterEnabled.update(enabled => !enabled);
-    this.filterController.setEnabled(this.filterEnabled());
+    this.synthEngine.setParameters({ filter: { enabled: this.filterEnabled() } });
   }
 
   protected onFilterTypeChange(event: Event): void {
     const select = event.target as HTMLSelectElement;
     const type = select.value as BiquadFilterType;
     this.filterType.set(type);
-    this.filterController.setType(type);
+    this.synthEngine.setParameters({ filter: { type } });
   }
 
   protected onFilterFrequencyChange(frequency: number): void {
     this.filterFrequency.set(frequency);
-    this.filterController.setFrequency(frequency);
+    this.synthEngine.setParameters({ filter: { frequency: this.filterFrequency() } });
   }
 
   protected onFilterQChange(q: number): void {
     this.filterQ.set(q);
-    this.filterController.setQ(q);
+    this.synthEngine.setParameters({ filter: { Q: this.filterQ() } });
   }
 
   protected toggleDistortion(): void {
     this.distortionEnabled.update(enabled => !enabled);
-    this.distortionController.setEnabled(this.distortionEnabled());
+    this.synthEngine.setParameters({ distortion: { enabled: this.distortionEnabled() } });
   }
 
   protected onDistortionAmountChange(amount: number): void {
     this.distortionAmount.set(amount);
-    this.distortionController.setAmount(amount);
+    this.synthEngine.setParameters({ distortion: { amount: this.distortionAmount() } });
   }
 
   protected toggleDistortionFold(): void {
     this.distortionFold.update(fold => !fold);
-    this.distortionController.setType(this.distortionFold() ? 'hard' : 'soft');
+    this.synthEngine.setParameters({ 
+      distortion: { type: this.distortionFold() ? 'hard' : 'soft' } 
+    });
   }
 
   protected toggleDelay(): void {
-    this.delayEnabled.update(enabled => !enabled);    
-    this.delayController.setEnabled(this.delayEnabled(), this.delayMix());
+    this.delayEnabled.update(enabled => !enabled);
+    this.synthEngine.setParameters({ 
+      delay: { enabled: this.delayEnabled(), mix: this.delayMix() } 
+    });
   }
 
   protected onDelayTimeChange(time: number): void {
     this.delayTime.set(time);
-    this.delayController.setDelayTime(time);
+    this.synthEngine.setParameters({ delay: { delayTime: this.delayTime() } });
   }
 
   protected onDelayFeedbackChange(feedback: number): void {
     this.delayFeedback.set(feedback);
-    this.delayController.setFeedback(feedback);
+    this.synthEngine.setParameters({ delay: { feedback: this.delayFeedback() } });
   }
 
   protected onDelayMixChange(mix: number): void {
     this.delayMix.set(mix);
-    this.delayController.setMix(mix);
+    this.synthEngine.setParameters({ delay: { mix: this.delayMix() } });
   }
 
   protected onEnvelopeAttackChange(attack: number): void {
     this.envelopeAttack.set(attack);
-    this.envelopeController.setAttack(attack);
+    this.synthEngine.setParameters({ envelope: { attack: this.envelopeAttack() } });
   }
 
   protected onEnvelopeDecayChange(decay: number): void {
     this.envelopeDecay.set(decay);
-    this.envelopeController.setDecay(decay);
+    this.synthEngine.setParameters({ envelope: { decay: this.envelopeDecay() } });
   }
 
   protected onEnvelopeSustainChange(sustain: number): void {
     this.envelopeSustain.set(sustain);
-    this.envelopeController.setSustain(sustain);
+    this.synthEngine.setParameters({ envelope: { sustain: this.envelopeSustain() } });
   }
 
   protected onEnvelopeReleaseChange(release: number): void {
     this.envelopeRelease.set(release);
-    this.envelopeController.setRelease(release);
+    this.synthEngine.setParameters({ envelope: { release: this.envelopeRelease() } });
   }
 
   protected onFilterKeyboardTrackingChange(amount: number): void {
     this.filterKeyboardTracking.set(amount);
-    this.filterController.setKeyboardTracking(amount);
+    this.synthEngine.setParameters({ filter: { keyboardTracking: this.filterKeyboardTracking() } });
   }
 
   protected toggleArpeggiator(): void {
     this.arpeggiatorEnabled.update(enabled => !enabled);
     
-    // Stop arpeggiator if disabled while playing
     if (!this.arpeggiatorEnabled() && this.arpeggiatorController.isRunning()) {
       this.arpeggiatorController.stop();
-      // Retrigger current base note
       if (this.currentBaseFrequency) {
         this.playFrequency(this.currentBaseFrequency, 0);
       }

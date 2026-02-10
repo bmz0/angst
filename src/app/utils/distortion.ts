@@ -1,106 +1,112 @@
+import { makeSoftClipCurve, makeHardClipCurve } from './distortionCurves.js';
+
 export type DistortionType = 'soft' | 'hard';
 
 export interface DistortionConfig {
   audioContext: AudioContext;
   destination: AudioNode;
-  type?: DistortionType;
-  amount?: number;
-  enabled?: boolean;
+  type: 'soft' | 'hard';
+  amount: number;
+  enabled: boolean;
 }
 
-export interface DistortionParams {
-  type?: DistortionType;
-  amount?: number;
+export interface DistortionParameters {
   enabled?: boolean;
+  type?: 'soft' | 'hard';
+  amount?: number;
 }
 
 export class DistortionController {
+  private inputNode: GainNode;
+  private dryGainNode: GainNode;
+  private wetGainNode: GainNode;
   private waveShaperNode: WaveShaperNode;
   private readonly audioContext: AudioContext;
-  private distortionType: DistortionType = 'hard';
-  private distortionAmount: number = 0;
-  private distortionEnabled: boolean = false;
+  private enabled: boolean;
+  private type: 'soft' | 'hard';
+  private amount: number;
 
   constructor(config: DistortionConfig) {
     this.audioContext = config.audioContext;
-    this.distortionType = config.type ?? 'hard';
-    this.distortionAmount = config.amount ?? 0;
-    this.distortionEnabled = config.enabled ?? false;
+    this.enabled = config.enabled;
+    this.type = config.type;
+    this.amount = config.amount;
+
+    this.inputNode = this.audioContext.createGain();
+    this.inputNode.gain.value = 1;
 
     this.waveShaperNode = this.audioContext.createWaveShaper();
-    this.waveShaperNode.connect(config.destination);
+    this.waveShaperNode.oversample = '4x';
     this.updateCurve();
+
+    this.dryGainNode = this.audioContext.createGain();
+    this.wetGainNode = this.audioContext.createGain();
+
+    this.inputNode.connect(this.dryGainNode);
+    this.inputNode.connect(this.waveShaperNode);
+    this.waveShaperNode.connect(this.wetGainNode);
+    this.dryGainNode.connect(config.destination);
+    this.wetGainNode.connect(config.destination);
+
+    this.updateBypass();
   }
 
-  getInput(): WaveShaperNode {
-    return this.waveShaperNode;
+  getInput(): GainNode {
+    return this.inputNode;
   }
 
-  setParams(params: DistortionParams): void {
-    if (params.type !== undefined) {
-      this.distortionType = params.type;
-    }
-    if (params.amount !== undefined) {
-      this.distortionAmount = params.amount;
-    }
+  setParameters(params: DistortionParameters): void {
+    let shouldUpdateBypass = false;
+    let shouldUpdateCurve = false;
+
     if (params.enabled !== undefined) {
-      this.distortionEnabled = params.enabled;
+      this.enabled = params.enabled;
+      shouldUpdateBypass = true;
     }
-    this.updateCurve();
+
+    if (params.type !== undefined) {
+      this.type = params.type;
+      shouldUpdateCurve = true;
+    }
+
+    if (params.amount !== undefined) {    
+      this.amount = params.amount;
+      shouldUpdateCurve = true;
+    }
+
+    if (shouldUpdateBypass) {
+      this.updateBypass();
+    }
+    if (shouldUpdateCurve) {
+      this.updateCurve();
+      
+    }
   }
 
-  getParams(): Required<DistortionParams> {
-    return {
-      type: this.distortionType,
-      amount: this.distortionAmount,
-      enabled: this.distortionEnabled
-    };
-  }
-
-  setType(type: DistortionType): void {
-    this.distortionType = type;
-    this.updateCurve();
-  }
-
-  getType(): DistortionType {
-    return this.distortionType;
-  }
-
-  setAmount(amount: number): void {
-    this.distortionAmount = amount;
-    this.updateCurve();
-  }
-
-  getAmount(): number {
-    return this.distortionAmount;
-  }
-
-  setEnabled(enabled: boolean): void {
-    this.distortionEnabled = enabled;
-    this.updateCurve();
-  }
-
-  isEnabled(): boolean {
-    return this.distortionEnabled;
-  }
-
-  disconnect(): void {
-    this.waveShaperNode.disconnect();
+  private updateBypass(): void {
+    const now = this.audioContext.currentTime;
+    if (this.enabled) {
+      this.dryGainNode.gain.setValueAtTime(0, now);
+      this.wetGainNode.gain.setValueAtTime(1, now);
+    } else {
+      this.dryGainNode.gain.setValueAtTime(1, now);
+      this.wetGainNode.gain.setValueAtTime(0, now);
+    }
   }
 
   private updateCurve(): void {
-    if (!this.distortionEnabled) {
-      this.waveShaperNode.curve = makeBypassCurve();
-      return;
-    }
-
-    if (this.distortionType === 'soft') {
-      this.waveShaperNode.curve = makeSoftClipCurve(this.distortionAmount);
-    } else {
-      const threshold = 1.0 - (this.distortionAmount / 100);
+    if (this.type === 'soft') {
+      this.waveShaperNode.curve = makeSoftClipCurve(this.amount);
+    } else if (this.type === 'hard') {
+      const threshold = 1.0 - (this.amount / 100);
       this.waveShaperNode.curve = makeHardClipCurve(threshold);
     }
   }
-}
 
-import { makeBypassCurve, makeHardClipCurve, makeSoftClipCurve } from './distortionCurves.js';
+  disconnect(): void {
+    this.inputNode.disconnect();
+    this.waveShaperNode.disconnect();
+    this.dryGainNode.disconnect();
+    this.wetGainNode.disconnect();
+  }
+}

@@ -5,7 +5,15 @@ export interface FilterConfig {
   frequency?: number;
   Q?: number;
   enabled?: boolean;
-  keyboardTracking?: number; // 0 = no tracking, 1 = full tracking
+  keyboardTracking?: number;
+}
+
+export interface FilterParameters {
+  enabled?: boolean;
+  type?: BiquadFilterType;
+  frequency?: number;
+  Q?: number;
+  keyboardTracking?: number;
 }
 
 export class FilterController {
@@ -21,17 +29,22 @@ export class FilterController {
   private keyboardTracking: number;
 
   // Compressor constants
-  private readonly COMPRESSOR_THRESHOLD = -6; // dB
   private readonly COMPRESSOR_KNEE = 30; // dB
   private readonly COMPRESSOR_RATIO = 12; // :1
   private readonly COMPRESSOR_ATTACK = 0.003; // seconds
   private readonly COMPRESSOR_RELEASE = 0.25; // seconds
+  
+  // Q-based threshold mapping constants
+  private readonly MIN_Q = 0;
+  private readonly MAX_Q = 40;
+  private readonly MIN_THRESHOLD = 0; // dB at Q=0
+  private readonly MAX_THRESHOLD = -32; // dB at Q=32
 
   constructor(config: FilterConfig) {
     this.audioContext = config.audioContext;
     this.enabled = config.enabled ?? false;
     this.baseFrequency = config.frequency ?? 1000;
-    this.keyboardTracking = config.keyboardTracking ?? 0.5;
+    this.keyboardTracking = config.keyboardTracking ?? 0;
 
     // Create input node
     this.inputNode = this.audioContext.createGain();
@@ -45,7 +58,6 @@ export class FilterController {
 
     // Create compressor for wet signal only
     this.compressorNode = this.audioContext.createDynamicsCompressor();
-    this.compressorNode.threshold.value = this.COMPRESSOR_THRESHOLD;
     this.compressorNode.knee.value = this.COMPRESSOR_KNEE;
     this.compressorNode.ratio.value = this.COMPRESSOR_RATIO;
     this.compressorNode.attack.value = this.COMPRESSOR_ATTACK;
@@ -68,6 +80,8 @@ export class FilterController {
     this.wetGainNode.connect(this.mixerNode);
     this.mixerNode.connect(config.destination);
 
+    // Set initial threshold based on Q
+    this.updateCompressorThreshold(config.Q ?? 1);
     this.updateBypass();
   }
 
@@ -75,39 +89,56 @@ export class FilterController {
     return this.inputNode;
   }
 
-  setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
-    this.updateBypass();
-  }
-
-  setType(type: BiquadFilterType): void {
-    this.filterNode.type = type;
-  }
-
-  setFrequency(frequency: number): void {
-    this.baseFrequency = frequency;
+  setParameters(params: FilterParameters): void {
     const now = this.audioContext.currentTime;
-    this.filterNode.frequency.setValueAtTime(frequency, now);
-  }
+    let shouldUpdateBypass = false;
 
-  setQ(q: number): void {
-    const now = this.audioContext.currentTime;
-    this.filterNode.Q.setValueAtTime(q, now);
-  }
+    if (params.enabled !== undefined) {
+      this.enabled = params.enabled;
+      shouldUpdateBypass = true;
+    }
 
-  setKeyboardTracking(amount: number): void {
-    this.keyboardTracking = Math.max(0, Math.min(1, amount));
+    if (params.type !== undefined) {
+      this.filterNode.type = params.type;
+    }
+
+    if (params.frequency !== undefined) {
+      this.baseFrequency = params.frequency;
+      this.filterNode.frequency.setValueAtTime(params.frequency, now);
+    }
+
+    if (params.Q !== undefined) {
+      this.filterNode.Q.setValueAtTime(params.Q, now);
+      this.updateCompressorThreshold(params.Q);
+    }
+
+    if (params.keyboardTracking !== undefined) {
+      this.keyboardTracking = Math.max(0, Math.min(1, params.keyboardTracking));
+    }
+
+    if (shouldUpdateBypass) {
+      this.updateBypass();
+    }
   }
 
   trackNote(noteFrequency: number): void {
-    if (this.keyboardTracking === 0) return;
-
     const now = this.audioContext.currentTime;
-    // Calculate tracked frequency: baseFreq + (noteFreq - baseFreq) * tracking
     const trackedFrequency = this.baseFrequency + 
       (noteFrequency - this.baseFrequency) * this.keyboardTracking;
     
     this.filterNode.frequency.setValueAtTime(trackedFrequency, now);
+  }
+
+  private updateCompressorThreshold(q: number): void {
+    // Clamp Q to expected range
+    const clampedQ = Math.max(this.MIN_Q, Math.min(this.MAX_Q, q), 0.0000001);
+    
+    const normalizedQ = Math.log(clampedQ) / Math.log(this.MAX_Q);
+    const threshold = this.MIN_THRESHOLD + 
+      (this.MAX_THRESHOLD - this.MIN_THRESHOLD) * normalizedQ;
+    
+    const now = this.audioContext.currentTime;
+    this.compressorNode.threshold.setValueAtTime(threshold, now);
   }
 
   private updateBypass(): void {
