@@ -54,7 +54,6 @@ export class SynthEngine {
   private oscillatorController2: OscillatorController;
   private envelopeController: EnvelopeController;
   private readonly audioContext: AudioContext;
-  private releaseTimeoutId?: number;
   private oscillator2SubOctave: boolean;
   private oscillator2Invert: boolean;
   private oscillator2Amount: number;
@@ -128,13 +127,8 @@ export class SynthEngine {
   }
 
   play(frequency: number): void {
-    if (this.releaseTimeoutId !== undefined) {
-      clearTimeout(this.releaseTimeoutId);
-      this.releaseTimeoutId = undefined;
-    }
-
-    this.oscillatorController1.play({ frequency, glideTime: this.glideTime });
     const osc2Frequency = this.oscillator2SubOctave ? frequency / 2 : frequency;
+    this.oscillatorController1.play({ frequency, glideTime: this.glideTime });
     this.oscillatorController2.play({ frequency: osc2Frequency, glideTime: this.glideTime });
     
     this.filterController.trackNote(frequency);
@@ -142,19 +136,11 @@ export class SynthEngine {
   }
 
   stop(): void {
+    const releaseTime = this.envelopeController.getParams().release;
     this.envelopeController.release();
 
-    if (this.releaseTimeoutId !== undefined) {
-      clearTimeout(this.releaseTimeoutId);
-      this.releaseTimeoutId = undefined;
-    }
-    
-    const releaseTime = this.envelopeController.getParams().release;
-    this.releaseTimeoutId = window.setTimeout(() => {
-      this.oscillatorController1.stop();
-      this.oscillatorController2.stop();
-      this.releaseTimeoutId = undefined;
-    }, releaseTime * 1000);
+    this.oscillatorController1.stop(releaseTime * 1000);
+    this.oscillatorController2.stop(releaseTime * 1000);
   }
 
   isPlaying(): boolean {
@@ -187,6 +173,14 @@ export class SynthEngine {
 
     if (params.oscillator2SubOctave !== undefined) {
       this.oscillator2SubOctave = params.oscillator2SubOctave;
+      const currentFrequency = this.oscillatorController1.getCurrentFrequency() ?? 440;
+      const osc2Frequency = this.oscillator2SubOctave ? currentFrequency / 2 : currentFrequency;
+
+      if (this.isPlaying()) {
+        const now = this.audioContext.currentTime;
+        this.oscillatorController1.restart({frequency: currentFrequency, when: now});
+        this.oscillatorController2.restart({frequency: osc2Frequency, when: now});
+      }
     }
 
     if (params.glideTime !== undefined) {
@@ -211,9 +205,6 @@ export class SynthEngine {
   }
 
   disconnect(): void {
-    if (this.releaseTimeoutId !== undefined) {
-      clearTimeout(this.releaseTimeoutId);
-    }
     this.oscillatorController1.disconnect();
     this.oscillatorController2.disconnect();
     this.envelopeController.disconnect();

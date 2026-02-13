@@ -10,12 +10,16 @@ export interface OscillatorConfig {
 export interface PlaybackOptions {
   frequency: number;
   glideTime?: number;
+  when?: number;
 }
 
+export type PlayState = 'init' | 'playing' | 'stopping' | 'stopped';
+
 export class OscillatorController {
-  private oscillatorNode: OscillatorNode;
+  private oscillatorNode: OscillatorNode | null = null;
   private gainNode: GainNode;
-  private currentFrequency?: number;
+  private currentState: PlayState = 'init';
+  private currentFrequency: number = 440;
   private readonly audioContext: AudioContext;
   private readonly destination: AudioNode;
   private oscillatorType: OscillatorType = 'sine';
@@ -27,36 +31,82 @@ export class OscillatorController {
     this.destination = config.destination;
     this.oscillatorType = config.type;
 
-    this.oscillatorNode = this.audioContext.createOscillator();
-    this.oscillatorNode.type = config.type;
-    this.oscillatorNode.frequency.value = config.frequency;
-
     this.gainNode = this.audioContext.createGain();
-    this.gainNode.gain.value = 0; // Silent until played
+
+    this.createOscillatorNode();
+    this.gainNode.connect(this.destination);
+  }
+
+  createOscillatorNode(): void {
+    this.oscillatorNode = this.audioContext.createOscillator();
+    this.oscillatorNode.type = this.oscillatorType;
+
+    this.oscillatorNode.frequency.value = this.currentFrequency;
 
     this.oscillatorNode.connect(this.gainNode);
-    this.gainNode.connect(config.destination);
-    this.oscillatorNode.start(); // Start immediately, control via gain
   }
 
   play(options: PlaybackOptions): void {
     const now = this.audioContext.currentTime;
-    const { frequency, glideTime = this.defaultGlideTime } = options;
-
-    // Just modulate frequency, oscillator keeps running
-    this.oscillatorNode.frequency.linearRampToValueAtTime(frequency, now + glideTime);
-    this.gainNode.gain.setValueAtTime(1, now);
-
+    const { frequency, glideTime = this.defaultGlideTime, when = now } = options;
+    
     this.currentFrequency = frequency;
+
+    switch (this.currentState) {
+      case 'init':
+      case 'stopped':
+        this.createOscillatorNode();
+        this.oscillatorNode!.start(when);
+        this.currentState = 'playing';
+        break;
+      case 'stopping':
+        this.disposeOscillator();
+        this.currentState = 'stopped';
+        this.play({ frequency, glideTime, when });
+        break
+     case 'playing':
+        this.oscillatorNode!.frequency.linearRampToValueAtTime(frequency, when + glideTime);
+        break;
+    }
+  }
+  
+  async stop(when?: number) {
+    const now = this.audioContext.currentTime;
+    const oscEnded = new Promise<void>((resolve) => {
+      if (this.oscillatorNode) {
+        this.oscillatorNode.addEventListener('ended', () => resolve(), { once: true, passive: true });
+      } else {
+        resolve();
+      }
+    });
+    
+    this.currentState = 'stopping';
+    this.oscillatorNode!.stop(when ?? now);
+    await oscEnded;
+    this.disposeOscillator();
   }
 
-  stop(): void {
-    this.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+  stopCallback = () => {
+    this.disposeOscillator();
+  }
+
+  restart(options: PlaybackOptions): void {
+    const { frequency , when } = options;
+    const now = this.audioContext.currentTime;
+    this.stop().then(() => {
+      this.play({ frequency: frequency ?? this.currentFrequency, when: when ?? now });
+    });
+  }
+
+  disposeOscillator(): void {
+    this.oscillatorNode!.disconnect(this.gainNode);
+    this.currentState = 'stopped';
+    this.oscillatorNode = null;
   }
 
   setType(type: OscillatorType): void {
     this.oscillatorType = type;
-    this.oscillatorNode.type = type;
+    this.oscillatorNode!.type = type;
   }
 
   getType(): OscillatorType {
@@ -64,7 +114,7 @@ export class OscillatorController {
   }
 
   isPlaying(): boolean {
-    return this.gainNode.gain.value > 0;
+    return this.currentState === 'playing' || this.currentState === 'stopping';
   }
 
   getCurrentFrequency(): number | undefined {
@@ -72,6 +122,7 @@ export class OscillatorController {
   }
 
   disconnect(): void {
-    this.stop();
+    this.oscillatorNode!.stop();
+    this.disposeOscillator();
   }
 }
