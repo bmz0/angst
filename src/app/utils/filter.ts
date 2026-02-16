@@ -1,7 +1,9 @@
+export type SupportedFilterType = 'lowpass' | 'highpass' | 'bandpass';
+
 export interface FilterConfig {
   audioContext: AudioContext;
   destination: AudioNode;
-  type?: BiquadFilterType;
+  type?: SupportedFilterType;
   frequency?: number;
   Q?: number;
   enabled?: boolean;
@@ -10,7 +12,7 @@ export interface FilterConfig {
 
 export interface FilterParameters {
   enabled?: boolean;
-  type?: BiquadFilterType;
+  type?: SupportedFilterType;
   frequency?: number;
   Q?: number;
   keyboardTracking?: number;
@@ -27,6 +29,7 @@ export class FilterController {
   private enabled: boolean;
   private baseFrequency: number;
   private keyboardTracking: number;
+  private lastTrackedNoteFrequency: number = 0;
 
   // Compressor constants
   private readonly COMPRESSOR_KNEE = 30; // dB
@@ -106,14 +109,15 @@ export class FilterController {
       this.baseFrequency = params.frequency;
       this.filterNode.frequency.setValueAtTime(params.frequency, now);
     }
-
+    
     if (params.Q !== undefined) {
       this.filterNode.Q.setValueAtTime(params.Q, now);
       this.updateCompressorThreshold(params.Q);
     }
-
+    
     if (params.keyboardTracking !== undefined) {
       this.keyboardTracking = Math.max(0, Math.min(1, params.keyboardTracking));
+      this.trackNote(this.lastTrackedNoteFrequency);
     }
 
     if (shouldUpdateBypass) {
@@ -122,6 +126,7 @@ export class FilterController {
   }
 
   trackNote(noteFrequency: number): void {
+    this.lastTrackedNoteFrequency = noteFrequency;
     const now = this.audioContext.currentTime;
     const trackedFrequency = this.baseFrequency + 
       (noteFrequency - this.baseFrequency) * this.keyboardTracking;

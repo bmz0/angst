@@ -7,6 +7,7 @@ import { ArpeggiatorController } from '../utils/arpeggiator.js';
 import { SynthEngine } from './synthEngine.js';
 import { getFrequency, getFrequencyWithOffset } from '../utils/common.js';
 import { AudioContextService } from '../services/audio-context.service.js';
+import { SupportedFilterType } from '../utils/filter.js';
 
 @Component({
   selector: 'app-synth',
@@ -29,7 +30,7 @@ export class Synth implements OnInit {
   protected oscillator2Invert = signal(false);
   protected glideTime = signal(0);
   protected filterEnabled = signal(false);
-  protected filterType = signal<BiquadFilterType>('lowpass');
+  protected filterType = signal<SupportedFilterType>('lowpass');
   protected filterFrequency = signal(1000);
   protected filterQ = signal(1);
   protected distortionEnabled = signal(false);
@@ -49,7 +50,7 @@ export class Synth implements OnInit {
   protected arpeggiatorPattern = signal('037');
   protected activeVisualizerTimeout: number | null = null;
 
-  protected readonly filterTypes: BiquadFilterType[] = [
+  protected readonly filterTypes: SupportedFilterType[] = [
     'lowpass',
     'highpass',
     'bandpass'
@@ -198,7 +199,7 @@ export class Synth implements OnInit {
 
   protected onFilterTypeChange(event: Event): void {
     const select = event.target as HTMLSelectElement;
-    const type = select.value as BiquadFilterType;
+    const type = select.value as SupportedFilterType;
     this.filterType.set(type);
     this.synthEngine.setParameters({ filter: { type } });
   }

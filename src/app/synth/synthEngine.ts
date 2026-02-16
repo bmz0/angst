@@ -1,7 +1,7 @@
 import { DelayController, DelayParameters } from '../utils/delay.js';
 import { DistortionController, DistortionParameters } from '../utils/distortion.js';
 import { EnvelopeController, EnvelopeParameters } from '../utils/envelope.js';
-import { FilterController, FilterParameters } from '../utils/filter.js';
+import { FilterController, FilterParameters, SupportedFilterType } from '../utils/filter.js';
 import { OscillatorController, OscillatorType } from '../utils/oscillator.js';
 
 export interface SynthEngineConfig {
@@ -14,7 +14,7 @@ export interface SynthEngineConfig {
   oscillator2Invert?: boolean;
   glideTime?: number;
   filterEnabled?: boolean;
-  filterType?: BiquadFilterType;
+  filterType?: SupportedFilterType;
   filterFrequency?: number;
   filterQ?: number;
   filterKeyboardTracking?: number;
@@ -46,7 +46,6 @@ export interface SynthEngineParameters {
 
 export class SynthEngine {
   private mixerGain: GainNode;
-  private oscillator2Gain: GainNode;
   private filterController: FilterController;
   private distortionController: DistortionController;
   private delayController: DelayController;
@@ -106,11 +105,6 @@ export class SynthEngine {
     this.mixerGain.gain.value = 0.5;
     this.mixerGain.connect(this.distortionController.getInput());
 
-    this.oscillator2Gain = this.audioContext.createGain();
-    const invertMultiplier = this.oscillator2Invert ? -1 : 1;
-    this.oscillator2Gain.gain.value = this.oscillator2Amount * invertMultiplier;
-    this.oscillator2Gain.connect(this.mixerGain);
-
     this.oscillatorController1 = new OscillatorController({
       audioContext: this.audioContext,
       type: config.oscillator1Type ?? 'sine',
@@ -122,7 +116,7 @@ export class SynthEngine {
       audioContext: this.audioContext,
       type: config.oscillator2Type ?? 'square',
       frequency: 220,
-      destination: this.oscillator2Gain
+      destination: this.mixerGain
     });
   }
 
@@ -149,11 +143,11 @@ export class SynthEngine {
 
   setParameters(params: SynthEngineParameters): void {
     if (params.oscillator1Type !== undefined) {
-      this.oscillatorController1.setType(params.oscillator1Type);
+      this.oscillatorController1.setParameters({ type: params.oscillator1Type });
     }
 
     if (params.oscillator2Type !== undefined) {
-      this.oscillatorController2.setType(params.oscillator2Type);
+      this.oscillatorController2.setParameters({type: params.oscillator2Type});
     }
 
     if (params.oscillator2Amount !== undefined || params.oscillator2Invert !== undefined) {
@@ -165,9 +159,9 @@ export class SynthEngine {
       }
 
       const now = this.audioContext.currentTime;
-      const invertMultiplier = this.oscillator2Invert ? -1 : 1;
+      this.oscillatorController2.setParameters({ invert: this.oscillator2Invert, gain: this.oscillator2Amount });
+
       const newMixerGain = 1 - (this.oscillator2Amount / 2);
-      this.oscillator2Gain.gain.setValueAtTime(this.oscillator2Amount * invertMultiplier, now);
       this.mixerGain.gain.setValueAtTime(newMixerGain, now);
     }
 
@@ -211,7 +205,6 @@ export class SynthEngine {
     this.filterController.disconnect();
     this.distortionController.disconnect();
     this.delayController.disconnect();
-    this.oscillator2Gain.disconnect();
     this.mixerGain.disconnect();
   }
 }
