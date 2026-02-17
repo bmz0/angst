@@ -76,17 +76,20 @@ export class OscillatorController {
   
   async stop(when?: number) {
     const now = this.audioContext.currentTime;
-    const oscEnded = new Promise<void>((resolve) => {
-      if (this.oscillatorNode) {
-        this.oscillatorNode.addEventListener('ended', () => resolve(), { once: true, passive: true });
-      } else {
-        resolve();
-      }
-    });
-    
-    this.currentState = 'stopping';
-    this.oscillatorNode!.stop(when ?? now);
-    await oscEnded;
+
+    if (this.oscillatorNode) {
+      const oscEnded = new Promise<void>((resolve) => {
+        if (this.oscillatorNode) {
+          this.oscillatorNode.addEventListener('ended', () => resolve(), { once: true, passive: true });
+        } else {
+          resolve();
+        }
+      });
+      this.currentState = 'stopping';
+      this.oscillatorNode!.stop(when ?? now);
+      await oscEnded;
+    }
+
     this.disposeOscillator();
   }
 
