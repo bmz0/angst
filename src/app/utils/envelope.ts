@@ -56,23 +56,25 @@ export class EnvelopeController {
   trigger(): void {
     const currentGain = this.gainNode.gain.value;
     const now = this.audioContext.currentTime;
+    const { attack, decay, sustain } = this;
 
     this.gainNode.gain.cancelScheduledValues(now);
     this.gainNode.gain.setValueAtTime(currentGain, now);
-    this.gainNode.gain.linearRampToValueAtTime(1, now + this.attack);
+    this.gainNode.gain.linearRampToValueAtTime(1, now + attack);
     this.gainNode.gain.linearRampToValueAtTime(
-      this.sustain,
-      now + this.attack + this.decay
+      sustain,
+      now + attack + decay
     );
   }
 
   release(): void {
     const currentGain = this.gainNode.gain.value;
     const now = this.audioContext.currentTime;
+    const { releaseTime } = this;
 
     this.gainNode.gain.cancelScheduledValues(now);
     this.gainNode.gain.setValueAtTime(currentGain, now);
-    this.gainNode.gain.linearRampToValueAtTime(0, now + this.releaseTime);
+    this.gainNode.gain.linearRampToValueAtTime(0, now + releaseTime);
   }
 
   getParams(): { attack: number; decay: number; sustain: number; release: number } {

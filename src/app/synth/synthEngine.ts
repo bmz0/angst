@@ -130,6 +130,7 @@ export class SynthEngine {
   }
 
   stop(): void {
+    const now = this.audioContext.currentTime;
     const releaseTime = this.envelopeController.getParams().release;
     this.envelopeController.release();
 
@@ -171,9 +172,8 @@ export class SynthEngine {
       const osc2Frequency = this.oscillator2SubOctave ? currentFrequency / 2 : currentFrequency;
 
       if (this.isPlaying()) {
-        const now = this.audioContext.currentTime;
-        this.oscillatorController1.restart({frequency: currentFrequency, when: now});
-        this.oscillatorController2.restart({frequency: osc2Frequency, when: now});
+        this.oscillatorController1.restart({ frequency: currentFrequency });
+        this.oscillatorController2.restart({ frequency: osc2Frequency });
       }
     }
 

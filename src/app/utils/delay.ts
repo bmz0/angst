@@ -5,6 +5,8 @@ export interface DelayConfig {
   feedback: number;
   mix: number;
   enabled: boolean;
+  pingPong?: boolean;
+  pingPongWidth?: number;
 }
 
 export interface DelayParameters {
@@ -12,6 +14,8 @@ export interface DelayParameters {
   delayTime?: number;
   feedback?: number;
   mix?: number;
+  pingPong?: boolean;
+  pingPongWidth?: number;
 }
 
 export class DelayController {
@@ -20,14 +24,22 @@ export class DelayController {
   private feedbackNode: GainNode;
   private dryGainNode: GainNode;
   private wetGainNode: GainNode;
+  private stereoPannerNode: StereoPannerNode;
   private readonly audioContext: AudioContext;
   private enabled: boolean;
   private mix: number;
+  private pingPong: boolean;
+  private pingPongWidth: number;
+  private panDirection: number;
+  private pingPongInterval?: number;
 
   constructor(config: DelayConfig) {
     this.audioContext = config.audioContext;
     this.enabled = config.enabled;
     this.mix = config.mix;
+    this.pingPong = config.pingPong ?? true;
+    this.pingPongWidth = config.pingPongWidth ?? 0.3;
+    this.panDirection = 1;
 
     this.inputNode = this.audioContext.createGain();
     this.inputNode.gain.value = 1;
@@ -38,6 +50,9 @@ export class DelayController {
     this.feedbackNode = this.audioContext.createGain();
     this.feedbackNode.gain.value = config.feedback;
 
+    this.stereoPannerNode = this.audioContext.createStereoPanner();
+    this.stereoPannerNode.pan.value = this.pingPongWidth * this.panDirection;
+
     this.dryGainNode = this.audioContext.createGain();
     this.wetGainNode = this.audioContext.createGain();
 
@@ -45,7 +60,8 @@ export class DelayController {
     this.inputNode.connect(this.delayNode);
     this.delayNode.connect(this.feedbackNode);
     this.feedbackNode.connect(this.delayNode);
-    this.delayNode.connect(this.wetGainNode);
+    this.delayNode.connect(this.stereoPannerNode);
+    this.stereoPannerNode.connect(this.wetGainNode);
     this.dryGainNode.connect(config.destination);
     this.wetGainNode.connect(config.destination);
 
@@ -56,6 +72,19 @@ export class DelayController {
     return this.inputNode;
   }
 
+  swicthPan(): void {
+    if (!this.pingPong) {
+      return;
+    }
+
+    this.panDirection *= -1;
+    const now = this.audioContext.currentTime;
+    this.stereoPannerNode.pan.setValueAtTime(
+      this.panDirection * this.pingPongWidth,
+      now
+    );
+  }
+
   setParameters(params: DelayParameters): void {
     const now = this.audioContext.currentTime;
     let shouldUpdateBypass = false;
@@ -63,6 +92,11 @@ export class DelayController {
     if (params.enabled !== undefined) {
       this.enabled = params.enabled;
       shouldUpdateBypass = true;
+      if (this.enabled) {
+        this.pingPongInterval = setInterval(() => this.swicthPan(), this.delayNode.delayTime.value * 1000); 
+      } else {
+        clearInterval(this.pingPongInterval);
+      }
     }
 
     if (params.mix !== undefined) {
@@ -79,6 +113,24 @@ export class DelayController {
 
     if (params.feedback !== undefined) {
       this.feedbackNode.gain.setValueAtTime(params.feedback, now);
+    }
+
+    if (params.pingPong !== undefined) {
+      this.pingPong = params.pingPong;
+      if (!this.pingPong) {
+        this.stereoPannerNode.pan.setValueAtTime(0, now);
+        this.panDirection = 1;
+      }
+    }
+
+    if (params.pingPongWidth !== undefined) {
+      this.pingPongWidth = params.pingPongWidth;
+      if (this.pingPong) {
+        this.stereoPannerNode.pan.setValueAtTime(
+          this.panDirection * this.pingPongWidth,
+          now
+        );
+      }
     }
 
     if (shouldUpdateBypass) {
@@ -101,6 +153,7 @@ export class DelayController {
     this.inputNode.disconnect();
     this.delayNode.disconnect();
     this.feedbackNode.disconnect();
+    this.stereoPannerNode.disconnect();
     this.dryGainNode.disconnect();
     this.wetGainNode.disconnect();
   }

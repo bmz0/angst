@@ -147,7 +147,7 @@ export class Synth implements OnInit {
     this.activeVisualizerTimeout = setTimeout(() => {
       this.visualizerRef?.stop();
       this.activeVisualizerTimeout = null;
-    }, 3000);
+    }, (1 + this.envelopeRelease()) * 1000);
   }
 
   protected onOctaveChanged(octave: number): void {

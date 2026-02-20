@@ -48,15 +48,16 @@ export class OscillatorController {
     this.oscillatorNode = this.audioContext.createOscillator();
     this.oscillatorNode.type = this.oscillatorType;
 
-    this.oscillatorNode.frequency.value = this.currentFrequency;
+    this.oscillatorNode.frequency.linearRampToValueAtTime(this.currentFrequency, this.audioContext.currentTime);
 
     this.oscillatorNode.connect(this.gainNode);
   }
 
   play(options: PlaybackOptions): void {
     const now = this.audioContext.currentTime;
-    const { frequency, glideTime = this.glideTime, when = now } = options;
-    
+    const { frequency, glideTime = this.glideTime, when } = options;
+    const playTime = when ? when + now : now;
+
     this.currentFrequency = frequency;
 
     switch (this.currentState) {
@@ -65,17 +66,20 @@ export class OscillatorController {
         this.disposeOscillator();
       case 'stopped':
         this.createOscillatorNode();
-        this.oscillatorNode!.start(when);
+        this.oscillatorNode!.start(playTime);
         this.currentState = 'playing';
         break;
      case 'playing':
-        this.oscillatorNode!.frequency.linearRampToValueAtTime(frequency, when + glideTime);
+        this.oscillatorNode!.frequency.linearRampToValueAtTime(frequency, playTime + glideTime);
         break;
     }
   }
   
   async stop(when?: number) {
     const now = this.audioContext.currentTime;
+    const stopTime = when ? now + when : now;
+
+    this.currentState = 'stopping';
 
     if (this.oscillatorNode) {
       const oscEnded = new Promise<void>((resolve) => {
@@ -85,8 +89,7 @@ export class OscillatorController {
           resolve();
         }
       });
-      this.currentState = 'stopping';
-      this.oscillatorNode!.stop(when ?? now);
+      this.oscillatorNode!.stop(stopTime);
       await oscEnded;
     }
 
@@ -94,17 +97,20 @@ export class OscillatorController {
   }
 
   restart(options: PlaybackOptions): void {
-    const { frequency , when } = options;
+    const { frequency, when } = options;
     const now = this.audioContext.currentTime;
-    this.stop().then(() => {
-      this.play({ frequency: frequency ?? this.currentFrequency, when: when ?? now });
+    const restartTime = when ? when + now : now;
+    this.stop(now).then(() => {
+      this.play({ frequency: frequency ?? this.currentFrequency, when: restartTime });
     });
   }
 
   disposeOscillator(): void {
-    this.oscillatorNode!.disconnect(this.gainNode);
     this.currentState = 'stopped';
-    this.oscillatorNode = null;
+    if (this.oscillatorNode) {
+      this.oscillatorNode.disconnect(this.gainNode);
+      this.oscillatorNode = null;
+    }
   }
 
   setParameters(params: OscillatorParameters): void {
@@ -117,8 +123,8 @@ export class OscillatorController {
 
     if (params.gain !== undefined || params.invert !== undefined) {
       this.invert = params.invert ?? this.invert;
-      const gain = params.gain ?? Math.abs(this.gainNode.gain.value);
-      this.gainNode.gain.setValueAtTime(this.invert ? -Math.abs(gain) : Math.abs(gain), now);
+      const gain = Math.abs(params.gain ?? this.gainNode.gain.value);
+      this.gainNode.gain.setValueAtTime(this.invert ? -gain : gain, now);
     }
     
     if (params.glideTime !== undefined) {
