@@ -18,6 +18,7 @@ export interface SynthEngineConfig {
   filterFrequency?: number;
   filterQ?: number;
   filterKeyboardTracking?: number;
+  filterPostGain?: number;
   distortionEnabled?: boolean;
   distortionAmount?: number;
   distortionFold?: boolean;
@@ -90,7 +91,8 @@ export class SynthEngine {
       frequency: config.filterFrequency ?? 1000,
       Q: config.filterQ ?? 1,
       enabled: config.filterEnabled ?? false,
-      keyboardTracking: config.filterKeyboardTracking ?? 0.5
+      keyboardTracking: config.filterKeyboardTracking ?? 0.5,
+      postGain: config.filterPostGain ?? 1
     });
 
     this.distortionController = new DistortionController({

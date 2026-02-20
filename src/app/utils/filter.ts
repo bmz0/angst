@@ -8,6 +8,7 @@ export interface FilterConfig {
   Q?: number;
   enabled?: boolean;
   keyboardTracking?: number;
+  postGain?: number;
 }
 
 export interface FilterParameters {
@@ -16,6 +17,7 @@ export interface FilterParameters {
   frequency?: number;
   Q?: number;
   keyboardTracking?: number;
+  postGain?: number;
 }
 
 export class FilterController {
@@ -72,7 +74,7 @@ export class FilterController {
 
     // Create mixer node where dry/wet combine
     this.mixerNode = this.audioContext.createGain();
-    this.mixerNode.gain.value = 1;
+    this.mixerNode.gain.value = config.postGain ?? 1;
 
     // Wire up nodes: filter → compressor → wetGain
     this.inputNode.connect(this.dryGainNode);
@@ -107,7 +109,7 @@ export class FilterController {
 
     if (params.frequency !== undefined) {
       this.baseFrequency = params.frequency;
-      this.filterNode.frequency.setValueAtTime(params.frequency, now);
+      this.trackNote(this.lastTrackedNoteFrequency);
     }
     
     if (params.Q !== undefined) {
@@ -118,6 +120,10 @@ export class FilterController {
     if (params.keyboardTracking !== undefined) {
       this.keyboardTracking = Math.max(0, Math.min(1, params.keyboardTracking));
       this.trackNote(this.lastTrackedNoteFrequency);
+    }
+
+    if (params.postGain !== undefined) {
+      this.mixerNode.gain.setValueAtTime(params.postGain, now);
     }
 
     if (shouldUpdateBypass) {

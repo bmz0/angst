@@ -54,6 +54,7 @@ export class DelayController {
     this.stereoPannerNode.pan.value = this.pingPongWidth * this.panDirection;
 
     this.dryGainNode = this.audioContext.createGain();
+    this.dryGainNode.gain.value = 1;
     this.wetGainNode = this.audioContext.createGain();
 
     this.inputNode.connect(this.dryGainNode);
@@ -142,10 +143,8 @@ export class DelayController {
     const now = this.audioContext.currentTime;
     if (this.enabled) {
       this.wetGainNode.gain.setValueAtTime(this.mix, now);
-      this.dryGainNode.gain.setValueAtTime(1 - this.mix, now);
     } else {
       this.wetGainNode.gain.setValueAtTime(0, now);
-      this.dryGainNode.gain.setValueAtTime(1, now);
     }
   }
 

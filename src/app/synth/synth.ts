@@ -49,6 +49,7 @@ export class Synth implements OnInit {
   protected arpeggiatorTempo = signal(300);
   protected arpeggiatorPattern = signal('037');
   protected activeVisualizerTimeout: number | null = null;
+  protected filterPostGain = signal(1);
 
   protected readonly filterTypes: SupportedFilterType[] = [
     'lowpass',
@@ -91,6 +92,7 @@ export class Synth implements OnInit {
       filterFrequency: this.filterFrequency(),
       filterQ: this.filterQ(),
       filterKeyboardTracking: this.filterKeyboardTracking(),
+      filterPostGain: this.filterPostGain(),
       distortionEnabled: this.distortionEnabled(),
       distortionAmount: this.distortionAmount(),
       distortionFold: this.distortionFold(),
@@ -212,6 +214,11 @@ export class Synth implements OnInit {
   protected onFilterQChange(q: number): void {
     this.filterQ.set(q);
     this.synthEngine.setParameters({ filter: { Q: this.filterQ() } });
+  }
+
+  protected onFilterPostGainChange(amount: number): void {
+    this.filterPostGain.set(amount);
+    this.synthEngine?.setParameters({ filter: { postGain: this.filterPostGain() }});
   }
 
   protected toggleDistortion(): void {

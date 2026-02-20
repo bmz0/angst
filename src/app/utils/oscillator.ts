@@ -47,8 +47,7 @@ export class OscillatorController {
   createOscillatorNode(): void {
     this.oscillatorNode = this.audioContext.createOscillator();
     this.oscillatorNode.type = this.oscillatorType;
-
-    this.oscillatorNode.frequency.linearRampToValueAtTime(this.currentFrequency, this.audioContext.currentTime);
+    this.oscillatorNode.frequency.value = this.currentFrequency;
 
     this.oscillatorNode.connect(this.gainNode);
   }
@@ -63,12 +62,13 @@ export class OscillatorController {
     switch (this.currentState) {
       //@ts-expect-error - early dispose oscillator if still stopping
       case 'stopping':
-        this.disposeOscillator();
+        if (this.oscillatorNode) this.disposeOscillator();
+        this.currentState = 'stopped';
+      //@ts-expect-error - continue playing immediately
       case 'stopped':
         this.createOscillatorNode();
         this.oscillatorNode!.start(playTime);
         this.currentState = 'playing';
-        break;
      case 'playing':
         this.oscillatorNode!.frequency.linearRampToValueAtTime(frequency, playTime + glideTime);
         break;
@@ -78,22 +78,25 @@ export class OscillatorController {
   async stop(when?: number) {
     const now = this.audioContext.currentTime;
     const stopTime = when ? now + when : now;
+    const currentOscillator = this.oscillatorNode;
 
     this.currentState = 'stopping';
 
-    if (this.oscillatorNode) {
+    if (currentOscillator) {
       const oscEnded = new Promise<void>((resolve) => {
-        if (this.oscillatorNode) {
-          this.oscillatorNode.addEventListener('ended', () => resolve(), { once: true, passive: true });
+        if (currentOscillator) {
+          currentOscillator.addEventListener('ended', () => resolve(), { once: true, passive: true });
         } else {
           resolve();
         }
       });
-      this.oscillatorNode!.stop(stopTime);
+      currentOscillator!.stop(stopTime);
       await oscEnded;
+      currentOscillator.disconnect(this.gainNode);
+      if (this.oscillatorNode === currentOscillator) this.oscillatorNode = null;
     }
 
-    this.disposeOscillator();
+    this.currentState = 'stopped';
   }
 
   restart(options: PlaybackOptions): void {
@@ -106,7 +109,6 @@ export class OscillatorController {
   }
 
   disposeOscillator(): void {
-    this.currentState = 'stopped';
     if (this.oscillatorNode) {
       this.oscillatorNode.disconnect(this.gainNode);
       this.oscillatorNode = null;

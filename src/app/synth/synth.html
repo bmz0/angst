@@ -151,6 +151,19 @@
             (input)="onFilterKeyboardTrackingChange(+$any($event.target).value)">
           <span>{{ (filterKeyboardTracking() * 100).toFixed(0) }}%</span>
         </label>
+
+        <label for="filter-post-gain">Post Gain:
+          <input
+            type="range"
+            id="filter-post-gain"
+            min="0"
+            max="2"
+            step="0.01"
+            [value]="filterPostGain()"
+            (input)="onFilterPostGainChange(+$any($event.target).value)"
+          />
+          <span>{{ (filterPostGain() * 100).toFixed(0) }}%</span>
+        </label>
       }
     </div>
 
