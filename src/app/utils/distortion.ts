@@ -3,7 +3,7 @@ import { makeSoftClipCurve, makeHardClipCurve } from './distortionCurves.js';
 export type DistortionType = 'soft' | 'hard';
 
 export interface DistortionConfig {
-  audioContext: AudioContext;
+  audioContext: BaseAudioContext;
   destination: AudioNode;
   type: 'soft' | 'hard';
   amount: number;
@@ -17,11 +17,13 @@ export interface DistortionParameters {
 }
 
 export class DistortionController {
+  static SOFT_CURVE_FN = makeSoftClipCurve;
+  static HARD_CURVE_FN = makeHardClipCurve;
   private inputNode: GainNode;
   private dryGainNode: GainNode;
   private wetGainNode: GainNode;
   private waveShaperNode: WaveShaperNode;
-  private readonly audioContext: AudioContext;
+  private readonly audioContext: BaseAudioContext;
   private enabled: boolean;
   private type: 'soft' | 'hard';
   private amount: number;
@@ -96,10 +98,10 @@ export class DistortionController {
 
   private updateCurve(): void {
     if (this.type === 'soft') {
-      this.waveShaperNode.curve = makeSoftClipCurve(this.amount);
+      this.waveShaperNode.curve = DistortionController.SOFT_CURVE_FN(this.amount);
     } else if (this.type === 'hard') {
       const threshold = 1.0 - (this.amount / 100);
-      this.waveShaperNode.curve = makeHardClipCurve(threshold);
+      this.waveShaperNode.curve = DistortionController.HARD_CURVE_FN(threshold);
     }
   }
 

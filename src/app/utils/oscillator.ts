@@ -1,7 +1,7 @@
 export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
 export type OscillatorConfig = {
-  audioContext: AudioContext;
+  audioContext: BaseAudioContext;
   destination: AudioNode;
 } & OscillatorParameters;
 
@@ -19,16 +19,16 @@ export interface OscillatorParameters {
   type?: OscillatorType;
 }
 
-export type PlayState = 'stopped' | 'playing' | 'stopping';
+export type PlayState = 'init' | 'stopped' | 'playing' | 'stopping';
 
 export class OscillatorController {
   private oscillatorNode: OscillatorNode | null = null;
   private gainNode: GainNode;
   private glideTime = 0.0;
   private invert: boolean = false;
-  private currentState: PlayState = 'stopped';
+  private currentState: PlayState = 'init';
   private currentFrequency: number = 440;
-  private readonly audioContext: AudioContext;
+  private readonly audioContext: BaseAudioContext;
   private readonly destination: AudioNode;
   private oscillatorType: OscillatorType = 'sine';
 
@@ -36,7 +36,7 @@ export class OscillatorController {
     this.audioContext = config.audioContext;
     this.destination = config.destination;
     
-    this.gainNode = this.audioContext.createGain();    
+    this.gainNode = this.audioContext.createGain();   
     this.createOscillatorNode();
 
     this.setParameters(config);
@@ -62,20 +62,23 @@ export class OscillatorController {
     switch (this.currentState) {
       //@ts-expect-error - early dispose oscillator if still stopping
       case 'stopping':
-        if (this.oscillatorNode) this.disposeOscillator();
+        this.disposeOscillator();
         this.currentState = 'stopped';
+      case 'init':
       //@ts-expect-error - continue playing immediately
       case 'stopped':
         this.createOscillatorNode();
-        this.oscillatorNode!.start(playTime);
         this.currentState = 'playing';
+        this.oscillatorNode!.start(playTime);
      case 'playing':
         this.oscillatorNode!.frequency.linearRampToValueAtTime(frequency, playTime + glideTime);
         break;
     }
   }
   
-  async stop(when?: number) {
+  stop(when?: number) {
+    if (!this.isPlaying()) return;
+      
     const now = this.audioContext.currentTime;
     const stopTime = when ? now + when : now;
     const currentOscillator = this.oscillatorNode;
@@ -83,29 +86,24 @@ export class OscillatorController {
     this.currentState = 'stopping';
 
     if (currentOscillator) {
-      const oscEnded = new Promise<void>((resolve) => {
-        if (currentOscillator) {
-          currentOscillator.addEventListener('ended', () => resolve(), { once: true, passive: true });
-        } else {
-          resolve();
-        }
-      });
-      currentOscillator!.stop(stopTime);
-      await oscEnded;
-      currentOscillator.disconnect(this.gainNode);
-      if (this.oscillatorNode === currentOscillator) this.oscillatorNode = null;
+      currentOscillator.addEventListener('ended', this.stopCallback, { once: true, passive: true })
+      currentOscillator.stop(stopTime);
     }
-
-    this.currentState = 'stopped';
   }
 
-  restart(options: PlaybackOptions): void {
+  protected stopCallback = (event: Event) => {
+    if (event.target as OscillatorNode === this.oscillatorNode) {
+      this.disposeOscillator();
+      this.currentState = 'stopped';
+    }
+  }
+
+  restart(options: Partial<PlaybackOptions>): void {
     const { frequency, when } = options;
     const now = this.audioContext.currentTime;
     const restartTime = when ? when + now : now;
-    this.stop(now).then(() => {
-      this.play({ frequency: frequency ?? this.currentFrequency, when: restartTime });
-    });
+    this.stop(now);
+    this.play({ frequency: frequency ?? this.currentFrequency, when: restartTime });
   }
 
   disposeOscillator(): void {
@@ -116,8 +114,6 @@ export class OscillatorController {
   }
 
   setParameters(params: OscillatorParameters): void {
-    const now = this.audioContext.currentTime;
-    
     if (params.frequency !== undefined) {
       this.currentFrequency = params.frequency;
       if (this.currentState === 'playing') this.play({ frequency: params.frequency });
@@ -126,7 +122,7 @@ export class OscillatorController {
     if (params.gain !== undefined || params.invert !== undefined) {
       this.invert = params.invert ?? this.invert;
       const gain = Math.abs(params.gain ?? this.gainNode.gain.value);
-      this.gainNode.gain.setValueAtTime(this.invert ? -gain : gain, now);
+      this.gainNode.gain.value = this.invert ? -gain : gain;
     }
     
     if (params.glideTime !== undefined) {
@@ -140,7 +136,7 @@ export class OscillatorController {
   }
 
   isPlaying(): boolean {
-    return this.currentState !== 'stopped';
+    return this.currentState === 'playing' || this.currentState === 'stopping';
   }
 
   getCurrentFrequency(): number | undefined {
@@ -156,7 +152,17 @@ export class OscillatorController {
   }
 
   disconnect(): void {
-    this.oscillatorNode!.stop();
-    this.disposeOscillator();
+    if (this.isPlaying()) {
+      this.oscillatorNode?.stop();
+    }
+    try {
+      this.gainNode.disconnect(this.destination);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'InvalidAccessError') {
+        // Ignore error if already disconnected
+      } else {
+        throw error;
+      }
+    }
   }
 }
