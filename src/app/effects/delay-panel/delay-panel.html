@@ -1,0 +1,46 @@
+<h3>Delay</h3>
+<label>
+  <input
+    type="checkbox"
+    [checked]="delayEnabled()"
+    (change)="toggleDelay()">
+  Enable
+</label>
+
+@if (delayEnabled()) {
+  <label>
+    Time:
+    <input
+      type="range"
+      min="0.01"
+      max="2"
+      step="0.01"
+      [value]="delayTime()"
+      (input)="onDelayTimeChange(+$any($event.target).value)">
+    <span>{{ delayTime().toFixed(2) }}s</span>
+  </label>
+
+  <label>
+    Feedback:
+    <input
+      type="range"
+      min="0"
+      max="0.95"
+      step="0.01"
+      [value]="delayFeedback()"
+      (input)="onDelayFeedbackChange(+$any($event.target).value)">
+    <span>{{ (delayFeedback() * 100).toFixed(0) }}%</span>
+  </label>
+
+  <label>
+    Mix:
+    <input
+      type="range"
+      min="0"
+      max="1"
+      step="0.01"
+      [value]="delayMix()"
+      (input)="onDelayMixChange(+$any($event.target).value)">
+    <span>{{ (delayMix() * 100).toFixed(0) }}%</span>
+  </label>
+}

@@ -99,11 +99,9 @@ export class OscillatorController {
   }
 
   restart(options: Partial<PlaybackOptions>): void {
-    const { frequency, when } = options;
-    const now = this.audioContext.currentTime;
-    const restartTime = when ? when + now : now;
-    this.stop(now);
-    this.play({ frequency: frequency ?? this.currentFrequency, when: restartTime });
+    const { frequency } = options;
+    this.stop();
+    this.play({ frequency: frequency ?? this.currentFrequency });
   }
 
   disposeOscillator(): void {

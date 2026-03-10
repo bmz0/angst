@@ -1,0 +1,70 @@
+<h3>Filter</h3>
+<label>
+  <input
+    type="checkbox"
+    [checked]="filterEnabled()"
+    (change)="toggleFilter()">
+  Enable
+</label>
+
+@if (filterEnabled()) {
+  <label>
+    Type:
+    <select
+      [value]="filterType()"
+      (change)="onFilterTypeChange($event)">
+      @for (type of filterTypes; track type) {
+        <option [value]="type">{{ type }}</option>
+      }
+    </select>
+  </label>
+
+  <label>
+    Frequency:
+    <input
+      type="range"
+      min="0"
+      max="12000"
+      step="1"
+      [value]="filterFrequency()"
+      (input)="onFilterFrequencyChange(+$any($event.target).value)">
+    <span>{{ filterFrequency().toFixed(0) }}Hz</span>
+  </label>
+
+  <label>
+    Q:
+    <input
+      type="range"
+      min="0.0001"
+      max="32"
+      step="0.1"
+      [value]="filterQ()"
+      (input)="onFilterQChange(+$any($event.target).value)">
+    <span>{{ filterQ().toFixed(1) }}</span>
+  </label>
+
+  <label>
+    Keyboard Tracking:
+    <input
+      type="range"
+      min="0"
+      max="1"
+      step="0.01"
+      [value]="filterKeyboardTracking()"
+      (input)="onFilterKeyboardTrackingChange(+$any($event.target).value)">
+    <span>{{ (filterKeyboardTracking() * 100).toFixed(0) }}%</span>
+  </label>
+
+  <label for="filter-post-gain">Post Gain:
+    <input
+      type="range"
+      id="filter-post-gain"
+      min="0"
+      max="2"
+      step="0.01"
+      [value]="filterPostGain()"
+      (input)="onFilterPostGainChange(+$any($event.target).value)"
+    />
+    <span>{{ (filterPostGain() * 100).toFixed(0) }}%</span>
+  </label>
+}
