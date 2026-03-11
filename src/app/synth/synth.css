@@ -19,6 +19,12 @@ input[type="range"] {
   margin: 0 auto;
 }
 
+.oscillator-controls {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+}
+
 .effects-controls {
   display: grid;
   gap: 2rem;
@@ -32,4 +38,3 @@ input[type="range"] {
   justify-content: center;
   gap: 60px;
 }
-

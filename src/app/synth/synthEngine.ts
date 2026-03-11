@@ -9,6 +9,7 @@ export interface SynthEngineConfig {
   destination: AudioNode;
   oscillator1Type?: OscillatorType;
   oscillator2Type?: OscillatorType;
+  oscillator1Amount?: number;
   oscillator2Amount?: number;
   oscillator2SubOctave?: boolean;
   oscillator2Invert?: boolean;
@@ -35,6 +36,7 @@ export interface SynthEngineConfig {
 export interface SynthEngineParameters {
   oscillator1Type?: OscillatorType;
   oscillator2Type?: OscillatorType;
+  oscillator1Amount?: number;
   oscillator2Amount?: number;
   oscillator2SubOctave?: boolean;
   oscillator2Invert?: boolean;
@@ -56,6 +58,7 @@ export class SynthEngine {
   private readonly audioContext: AudioContext;
   private oscillator2SubOctave: boolean;
   private oscillator2Invert: boolean;
+  private oscillator1Amount: number;
   private oscillator2Amount: number;
   private glideTime: number;
 
@@ -63,6 +66,7 @@ export class SynthEngine {
     this.audioContext = config.audioContext;
     this.oscillator2SubOctave = config.oscillator2SubOctave ?? true;
     this.oscillator2Invert = config.oscillator2Invert ?? false;
+    this.oscillator1Amount = config.oscillator1Amount ?? 1;
     this.oscillator2Amount = config.oscillator2Amount ?? 1;
     this.glideTime = config.glideTime ?? 0;
 
@@ -110,6 +114,7 @@ export class SynthEngine {
     this.oscillatorController1 = new OscillatorController({
       audioContext: this.audioContext,
       type: config.oscillator1Type ?? 'sine',
+      gain: this.oscillator1Amount,
       frequency: 440,
       destination: this.mixerGain
     });
@@ -153,6 +158,11 @@ export class SynthEngine {
       this.oscillatorController2.setParameters({type: params.oscillator2Type});
     }
 
+    if (params.oscillator1Amount !== undefined) {
+      this.oscillator1Amount = params.oscillator1Amount;
+      this.oscillatorController1.setParameters({ gain: this.oscillator1Amount });
+    }
+
     if (params.oscillator2Amount !== undefined || params.oscillator2Invert !== undefined) {
       if (params.oscillator2Amount !== undefined) {
         this.oscillator2Amount = params.oscillator2Amount;
@@ -161,11 +171,7 @@ export class SynthEngine {
         this.oscillator2Invert = params.oscillator2Invert;
       }
 
-      const now = this.audioContext.currentTime;
       this.oscillatorController2.setParameters({ invert: this.oscillator2Invert, gain: this.oscillator2Amount });
-
-      const newMixerGain = 1 - (this.oscillator2Amount / 2);
-      this.mixerGain.gain.setValueAtTime(newMixerGain, now);
     }
 
     if (params.oscillator2SubOctave !== undefined) {

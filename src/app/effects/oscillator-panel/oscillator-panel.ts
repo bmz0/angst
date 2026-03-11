@@ -15,7 +15,7 @@ export class OscillatorPanel {
 
   protected oscillator1Type = signal<OscillatorType>('sine');
   protected oscillator2Type = signal<OscillatorType>('square');
-  protected oscillator2Amount = signal(1);
+  protected oscillatorMix = signal(0.5);
   protected oscillator2SubOctave = signal(true);
   protected oscillator2Invert = signal(false);
   protected glideTime = signal(0);
@@ -44,9 +44,12 @@ export class OscillatorPanel {
     this.synthEngineService.setParameters({ glideTime: time });
   }
 
-  protected onOscillator2AmountChange(amount: number): void {
-    this.oscillator2Amount.set(amount);
-    this.synthEngineService.setParameters({ oscillator2Amount: amount });
+  protected onOscillatorMixChange(mix: number): void {
+    this.oscillatorMix.set(mix);
+    this.synthEngineService.setParameters({
+      oscillator1Amount: 1 - mix,
+      oscillator2Amount: mix
+    });
   }
 
   protected toggleOscillator2SubOctave(): void {

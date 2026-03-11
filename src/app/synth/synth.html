@@ -1,5 +1,8 @@
 <div class="synth-container">
-  <oscillator-panel></oscillator-panel>
+  <div class="oscillator-controls">
+    <oscillator-panel></oscillator-panel>
+    <osc-visualizer [analyser]="analyser"></osc-visualizer>
+  </div>
 
   <div class="effects-controls">
     <distortion-panel></distortion-panel>
@@ -17,8 +20,6 @@
       (octaveChanged)="onOctaveChanged($event)"
       (oscillatorTypeToggled)="toggleOscillatorType()">
     </piano-keyboard>
-
-    <osc-visualizer [analyser]="analyser"></osc-visualizer>
   </div>
 </div>
 
