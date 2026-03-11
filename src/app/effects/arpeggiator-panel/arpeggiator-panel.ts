@@ -1,4 +1,4 @@
-import { Component, OnDestroy, output, signal } from '@angular/core';
+import { Component, DestroyRef, inject, output, signal } from '@angular/core';
 import { ArpeggiatorController } from '../../utils/arpeggiator.js';
 
 @Component({
@@ -7,7 +7,7 @@ import { ArpeggiatorController } from '../../utils/arpeggiator.js';
   styleUrl: './arpeggiator-panel.css',
   standalone: true
 })
-export class ArpeggiatorPanel implements OnDestroy {
+export class ArpeggiatorPanel {
   stoppedWhilePlaying = output<void>();
 
   protected arpeggiatorEnabled = signal(false);
@@ -19,6 +19,12 @@ export class ArpeggiatorPanel implements OnDestroy {
     pattern: '037'
   });
 
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.arpeggiatorController.stop());
+  }
+
   isEnabled(): boolean {
     return this.arpeggiatorEnabled();
   }
@@ -28,10 +34,6 @@ export class ArpeggiatorPanel implements OnDestroy {
   }
 
   stop(): void {
-    this.arpeggiatorController.stop();
-  }
-
-  ngOnDestroy(): void {
     this.arpeggiatorController.stop();
   }
 

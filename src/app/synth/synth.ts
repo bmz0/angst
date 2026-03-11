@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, signal, DestroyRef, inject } from '@angular/core';
+import { Component, viewChild, signal, DestroyRef, inject } from '@angular/core';
 import { Keyboard } from '../keyboard/keyboard.js';
 import { Visualizer } from '../visualizer/visualizer.js';
 import { OscillatorPanel } from '../effects/oscillator-panel/oscillator-panel.js';
@@ -9,7 +9,6 @@ import { DelayPanel } from '../effects/delay-panel/delay-panel.js';
 import { ArpeggiatorPanel } from '../effects/arpeggiator-panel/arpeggiator-panel.js';
 import { SynthEngineService } from '../services/synth-engine.service.js';
 import { getFrequency, getFrequencyWithOffset } from '../utils/common.js';
-import { AudioContextService } from '../services/audio-context.service.js';
 
 @Component({
   selector: 'app-synth',
@@ -18,39 +17,30 @@ import { AudioContextService } from '../services/audio-context.service.js';
   styleUrl: './synth.css',
   standalone: true
 })
-export class Synth implements OnInit {
-  @ViewChild(Visualizer) private visualizerRef!: Visualizer;
-  @ViewChild(OscillatorPanel) private oscillatorPanel!: OscillatorPanel;
-  @ViewChild(EnvelopePanel) private envelopePanel!: EnvelopePanel;
-  @ViewChild(ArpeggiatorPanel) private arpeggiatorPanel!: ArpeggiatorPanel;
+export class Synth {
+  private readonly visualizerRef = viewChild.required(Visualizer);
+  private readonly oscillatorPanel = viewChild.required(OscillatorPanel);
+  private readonly envelopePanel = viewChild.required(EnvelopePanel);
+  private readonly arpeggiatorPanel = viewChild.required(ArpeggiatorPanel);
 
-  protected readonly audioContext = inject(AudioContextService);
   private readonly synthEngineService = inject(SynthEngineService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected analyser!: AnalyserNode;
   protected currentOctave = signal(4);
   private activeVisualizerTimeout: number | null = null;
   private currentBaseFrequency?: number;
 
-  ngOnInit(): void {
+  constructor() {
     this.init();
 
     this.destroyRef.onDestroy(() => {
-      this.arpeggiatorPanel?.stop();
+      this.arpeggiatorPanel().stop();
       this.synthEngineService.disconnect();
     });
   }
 
   private init(): void {
-    const ctx = this.audioContext.getContext()!;
-
-    this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 512;
-    this.analyser.connect(ctx.destination);
-
     this.synthEngineService.initialize({
-      destination: this.analyser,
       oscillator1Type: 'sine',
       oscillator2Type: 'square',
       oscillator1Amount: 0.5,
@@ -85,20 +75,20 @@ export class Synth implements OnInit {
     
     this.currentBaseFrequency = baseFrequency;
 
-    if (this.arpeggiatorPanel?.isEnabled()) {
-      this.arpeggiatorPanel.start((semitoneOffset) => {
+    if (this.arpeggiatorPanel().isEnabled()) {
+      this.arpeggiatorPanel().start((semitoneOffset) => {
         this.playFrequency(baseFrequency, semitoneOffset);
       });
     } else {
       this.playFrequency(baseFrequency, 0);
     }
 
-    if (this.synthEngineService.isPlaying() && this.visualizerRef) {
+    if (this.synthEngineService.isPlaying()) {
       if (this.activeVisualizerTimeout) {
         clearTimeout(this.activeVisualizerTimeout);
         this.activeVisualizerTimeout = null;
       }
-      this.visualizerRef.start();
+      this.visualizerRef().start();
     }
   }
 
@@ -108,12 +98,12 @@ export class Synth implements OnInit {
   }
 
   protected stop(): void {
-    this.arpeggiatorPanel?.stop();
+    this.arpeggiatorPanel().stop();
     this.synthEngineService.stop();
 
-    const releaseTime = this.envelopePanel?.getRelease() ?? 0.5;
+    const releaseTime = this.envelopePanel().getRelease();
     this.activeVisualizerTimeout = setTimeout(() => {
-      this.visualizerRef?.stop();
+      this.visualizerRef().stop();
       this.activeVisualizerTimeout = null;
     }, (1 + releaseTime) * 1000);
   }
@@ -123,7 +113,7 @@ export class Synth implements OnInit {
   }
 
   protected toggleOscillatorType(): void {
-    this.oscillatorPanel?.toggleOscillator1Type();
+    this.oscillatorPanel().toggleOscillator1Type();
   }
 
   protected onArpeggiatorStoppedWhilePlaying(): void {

@@ -5,14 +5,24 @@ import { SynthEngine, SynthEngineConfig, SynthEngineParameters } from '../synth/
 @Injectable({ providedIn: 'root' })
 export class SynthEngineService {
   private engine?: SynthEngine;
+  private analyser?: AnalyserNode;
   private readonly audioCtx = inject(AudioContextService);
 
-  initialize(config: Omit<SynthEngineConfig, 'audioContext'>): void {
+  initialize(config: Omit<SynthEngineConfig, 'audioContext' | 'destination'>): void {
+    const ctx = this.audioCtx.getContext()!;
+    this.analyser = ctx.createAnalyser();
+    this.analyser.fftSize = 512;
+    this.analyser.connect(ctx.destination);
     this.engine?.disconnect();
     this.engine = new SynthEngine({
-      audioContext: this.audioCtx.getContext()!,
+      audioContext: ctx,
+      destination: this.analyser,
       ...config
     });
+  }
+
+  getAnalyser(): AnalyserNode | undefined {
+    return this.analyser;
   }
 
   setParameters(params: SynthEngineParameters): void {

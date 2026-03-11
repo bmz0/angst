@@ -1,9 +1,6 @@
 <div class="oscillator-section">
   <h3>Oscillator 1</h3>
-  <oscillator-selector
-    [selectedType]="oscillator1Type()"
-    (typeSelected)="onOscillator1TypeSelected($event)">
-  </oscillator-selector>
+  <oscillator-selector [(selectedType)]="oscillator1Type"></oscillator-selector>
 
   <label>
    <span>{{ ((1 - oscillatorMix()) * 100).toFixed(0) }}% </span>
@@ -17,10 +14,7 @@
     <span>{{ (oscillatorMix() * 100).toFixed(0) }}%</span>
   </label>
 
-  <oscillator-selector
-    [selectedType]="oscillator2Type()"
-    (typeSelected)="onOscillator2TypeSelected($event)">
-  </oscillator-selector>
+  <oscillator-selector [(selectedType)]="oscillator2Type"></oscillator-selector>
   <h3>Oscillator 2</h3>
 </div>
 

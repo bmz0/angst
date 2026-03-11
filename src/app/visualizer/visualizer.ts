@@ -1,5 +1,6 @@
-import { Component, ViewChild, ElementRef, AfterViewInit, OnDestroy, input } from '@angular/core';
+import { Component, viewChild, ElementRef, afterNextRender, DestroyRef, inject } from '@angular/core';
 import { drawWaveform } from './canvasDrawer.js';
+import { SynthEngineService } from '../services/synth-engine.service.js';
 
 @Component({
   selector: 'osc-visualizer',
@@ -7,30 +8,31 @@ import { drawWaveform } from './canvasDrawer.js';
   styleUrls: ['./visualizer.css'],
   standalone: true
 })
-export class Visualizer implements AfterViewInit, OnDestroy {
-  @ViewChild('canvas', { static: false }) canvasRef!: ElementRef<HTMLCanvasElement>;
-  analyser = input<AnalyserNode>();
-  
+export class Visualizer {
+  private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+
+  private readonly synthEngineService = inject(SynthEngineService);
+  private readonly destroyRef = inject(DestroyRef);
   private canvasContext?: CanvasRenderingContext2D;
   private animationId?: number;
 
-  ngAfterViewInit(): void {
-    this.canvasContext = this.canvasRef.nativeElement.getContext('2d')!;
-  }
-
-  ngOnDestroy(): void {
-    this.stop();
+  constructor() {
+    afterNextRender(() => {
+      this.canvasContext = this.canvasRef().nativeElement.getContext('2d')!;
+    });
+    this.destroyRef.onDestroy(() => this.stop());
   }
 
   public start(): void {
-    if (!this.analyser || !this.canvasContext) return;
+    const analyser = this.synthEngineService.getAnalyser();
+    if (!analyser || !this.canvasContext) return;
     
-    const canvas = this.canvasRef.nativeElement;
+    const canvas = this.canvasRef().nativeElement;
     
     const draw = () => {
       if (this.animationId) cancelAnimationFrame(this.animationId)
       this.animationId = requestAnimationFrame(draw);
-      drawWaveform(this.analyser()!, canvas, this.canvasContext!);
+      drawWaveform(analyser, canvas, this.canvasContext!);
     };
     
     draw();
