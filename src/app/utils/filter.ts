@@ -81,8 +81,8 @@ export class FilterController {
     this.inputNode.connect(this.filterNode);
     this.filterNode.connect(this.compressorNode);
     this.compressorNode.connect(this.wetGainNode);
-    this.dryGainNode.connect(this.mixerNode);
     this.wetGainNode.connect(this.mixerNode);
+    this.dryGainNode.connect(config.destination);
     this.mixerNode.connect(config.destination);
 
     // Set initial threshold based on Q

@@ -33,6 +33,10 @@ export class SynthEngineService {
     this.engine?.play(frequency);
   }
 
+  setDetune(cents: number): void {
+    this.engine?.setDetune(cents);
+  }
+
   stop(): void {
     this.engine?.stop();
   }

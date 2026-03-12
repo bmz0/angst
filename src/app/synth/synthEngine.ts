@@ -108,7 +108,7 @@ export class SynthEngine {
     });
 
     this.mixerGain = this.audioContext.createGain();
-    this.mixerGain.gain.value = 0.5;
+    this.mixerGain.gain.value = 1;
     this.mixerGain.connect(this.distortionController.getInput());
 
     this.oscillatorController1 = new OscillatorController({
@@ -122,6 +122,7 @@ export class SynthEngine {
     this.oscillatorController2 = new OscillatorController({
       audioContext: this.audioContext,
       type: config.oscillator2Type ?? 'square',
+      gain: this.oscillator2Amount,
       frequency: 220,
       destination: this.mixerGain
     });
@@ -137,7 +138,6 @@ export class SynthEngine {
   }
 
   stop(): void {
-    const now = this.audioContext.currentTime;
     const releaseTime = this.envelopeController.getParams().release;
     this.envelopeController.release();
 
@@ -204,6 +204,11 @@ export class SynthEngine {
     if (params.envelope !== undefined) {
       this.envelopeController.setParameters(params.envelope);
     }
+  }
+
+  setDetune(cents: number): void {
+    this.oscillatorController1.setDetune(cents);
+    this.oscillatorController2.setDetune(cents);
   }
 
   disconnect(): void {

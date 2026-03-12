@@ -32,22 +32,25 @@
   </label>
 
   <div class="oscillator-controls">
-    <label for="oscillator2-sub-octave">Sub
-      <input
-        type="checkbox"
-        id="oscillator2-sub-octave"
-        [checked]="oscillator2SubOctave()"
-        (change)="toggleOscillator2SubOctave()"
-      />
-    </label>
+    <fieldset>
+      <legend>Oscillator 2</legend>
+      <label for="oscillator2-sub-octave">Sub-Octave
+        <input
+          type="checkbox"
+          id="oscillator2-sub-octave"
+          [checked]="oscillator2SubOctave()"
+          (change)="toggleOscillator2SubOctave()"
+        />
+      </label>
 
-    <label for="oscillator2-invert">Invert
-      <input
-        type="checkbox"
-        id="oscillator2-invert"
-        [checked]="oscillator2Invert()"
-        (change)="onOscillator2InvertChange()"
-      />
-    </label>
+      <label for="oscillator2-invert">Invert
+        <input
+          type="checkbox"
+          id="oscillator2-invert"
+          [checked]="oscillator2Invert()"
+          (change)="onOscillator2InvertChange()"
+        />
+      </label>
+    </fieldset>
   </div>
 </div>

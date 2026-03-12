@@ -133,6 +133,12 @@ export class OscillatorController {
     }
   }
 
+  setDetune(cents: number): void {
+    if (this.oscillatorNode) {
+      this.oscillatorNode.detune.value = cents;
+    }
+  }
+
   isPlaying(): boolean {
     return this.currentState === 'playing' || this.currentState === 'stopping';
   }

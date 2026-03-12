@@ -8,7 +8,7 @@ import { EnvelopePanel } from '../effects/envelope-panel/envelope-panel.js';
 import { DelayPanel } from '../effects/delay-panel/delay-panel.js';
 import { ArpeggiatorPanel } from '../effects/arpeggiator-panel/arpeggiator-panel.js';
 import { SynthEngineService } from '../services/synth-engine.service.js';
-import { getFrequency, getFrequencyWithOffset } from '../utils/common.js';
+import { getFrequency } from '../utils/common.js';
 
 @Component({
   selector: 'app-synth',
@@ -28,7 +28,6 @@ export class Synth {
 
   protected currentOctave = signal(4);
   private activeVisualizerTimeout: number | null = null;
-  private currentBaseFrequency?: number;
 
   constructor() {
     this.init();
@@ -73,14 +72,13 @@ export class Synth {
     const scientificNotation = `${note}${octave}`;
     const baseFrequency = getFrequency(scientificNotation);
     
-    this.currentBaseFrequency = baseFrequency;
-
     if (this.arpeggiatorPanel().isEnabled()) {
+      this.synthEngineService.play(baseFrequency);
       this.arpeggiatorPanel().start((semitoneOffset) => {
-        this.playFrequency(baseFrequency, semitoneOffset);
+        this.synthEngineService.setDetune(semitoneOffset * 100);
       });
     } else {
-      this.playFrequency(baseFrequency, 0);
+      this.synthEngineService.play(baseFrequency);
     }
 
     if (this.synthEngineService.isPlaying()) {
@@ -92,17 +90,12 @@ export class Synth {
     }
   }
 
-  private playFrequency(baseFrequency: number, semitoneOffset: number): void {
-    const frequency = getFrequencyWithOffset(baseFrequency, semitoneOffset);
-    this.synthEngineService.play(frequency);
-  }
-
   protected stop(): void {
-    this.arpeggiatorPanel().stop();
-    this.synthEngineService.stop();
-
     const releaseTime = this.envelopePanel().getRelease();
+
+    this.synthEngineService.stop();
     this.activeVisualizerTimeout = setTimeout(() => {
+      this.arpeggiatorPanel().stop();
       this.visualizerRef().stop();
       this.activeVisualizerTimeout = null;
     }, (1 + releaseTime) * 1000);
@@ -117,8 +110,6 @@ export class Synth {
   }
 
   protected onArpeggiatorStoppedWhilePlaying(): void {
-    if (this.currentBaseFrequency) {
-      this.playFrequency(this.currentBaseFrequency, 0);
-    }
+    this.synthEngineService.setDetune(0);
   }
 }
