@@ -10,10 +10,10 @@ import { SynthEngineService } from '../../services/synth-engine.service.js';
 export class DelayPanel {
   private readonly synthEngineService = inject(SynthEngineService);
 
-  protected delayEnabled = signal(false);
-  protected delayTime = signal(0.3);
-  protected delayFeedback = signal(0.3);
-  protected delayMix = signal(0.3);
+  protected delayEnabled = signal(this.synthEngineService.getPatch().delayEnabled);
+  protected delayTime = signal(this.synthEngineService.getPatch().delayTime);
+  protected delayFeedback = signal(this.synthEngineService.getPatch().delayFeedback);
+  protected delayMix = signal(this.synthEngineService.getPatch().delayMix);
 
   protected toggleDelay(): void {
     this.delayEnabled.update(enabled => !enabled);

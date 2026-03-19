@@ -9,6 +9,7 @@ import { DelayPanel } from '../effects/delay-panel/delay-panel.js';
 import { ArpeggiatorPanel } from '../effects/arpeggiator-panel/arpeggiator-panel.js';
 import { SynthEngineService } from '../services/synth-engine.service.js';
 import { getFrequency } from '../utils/common.js';
+import { DEFAULT_PATCH, synthPatchToEngineConfig } from './synth-patch.js';
 
 @Component({
   selector: 'app-synth',
@@ -39,32 +40,7 @@ export class Synth {
   }
 
   private init(): void {
-    this.synthEngineService.initialize({
-      oscillator1Type: 'sine',
-      oscillator2Type: 'square',
-      oscillator1Amount: 0.5,
-      oscillator2Amount: 0.5,
-      oscillator2SubOctave: true,
-      oscillator2Invert: false,
-      glideTime: 0,
-      filterEnabled: false,
-      filterType: 'lowpass',
-      filterFrequency: 1000,
-      filterQ: 1,
-      filterKeyboardTracking: 0.5,
-      filterPostGain: 1,
-      distortionEnabled: false,
-      distortionAmount: 0,
-      distortionFold: false,
-      delayEnabled: false,
-      delayTime: 0.3,
-      delayFeedback: 0.3,
-      delayMix: 0.3,
-      envelopeAttack: 0.005,
-      envelopeDecay: 0.1,
-      envelopeSustain: 0.7,
-      envelopeRelease: 0.5
-    });
+    this.synthEngineService.initialize(synthPatchToEngineConfig(DEFAULT_PATCH));
   }
 
   protected play(note: string, octaveOffset: number = 0): void {

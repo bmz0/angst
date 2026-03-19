@@ -26,19 +26,19 @@ export function makeSoftClipCurve(amount: number, samples: number = 48000) {
 }
 
 /**
- * Creates a hard clipping curve with threshold-based folding and normalization.
- * Samples exceeding the threshold are folded back by subtracting the excess.
+ * Creates a wave folding curve. Samples exceeding the threshold are folded
+ * back rather than clipped, producing a richer harmonic character.
  * The curve is normalized to maintain consistent output level.
- * 
- * @param threshold - Clipping threshold (0.0 to 1.0). Lower values = more distortion
+ *
+ * @param threshold - Fold threshold (0.0 to 1.0). Lower values = more folding
  * @param samples - Number of samples in the transfer curve
  * @returns Float32Array representing the waveshaper curve
  */
-export function makeHardClipCurve(threshold: number = 0.5, samples: number = 48000) {
+export function makeFoldCurve(threshold: number = 0.5, samples: number = 48000) {
   const curve = new Float32Array(samples);
   
-  // Clamp threshold between 0.1 and 1.0 to prevent extreme values
-  const clampedThreshold = Math.max(0.1, Math.min(1.0, threshold));
+  // Clamp threshold between 0.0 and 1.0 to prevent extreme values
+  const clampedThreshold = Math.max(0.0, Math.min(1.0, threshold));
   
   let maxValue = 0;
   

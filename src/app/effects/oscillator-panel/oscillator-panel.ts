@@ -13,12 +13,12 @@ import { SynthEngineService } from '../../services/synth-engine.service.js';
 export class OscillatorPanel {
   private readonly synthEngineService = inject(SynthEngineService);
 
-  protected oscillator1Type = signal<OscillatorType>('sine');
-  protected oscillator2Type = signal<OscillatorType>('square');
-  protected oscillatorMix = signal(0.5);
-  protected oscillator2SubOctave = signal(true);
-  protected oscillator2Invert = signal(false);
-  protected glideTime = signal(0);
+  protected oscillator1Type = signal<OscillatorType>(this.synthEngineService.getPatch().oscillator1Type);
+  protected oscillator2Type = signal<OscillatorType>(this.synthEngineService.getPatch().oscillator2Type);
+  protected oscillatorMix = signal(this.synthEngineService.getPatch().oscillator2Amount);
+  protected oscillator2SubOctave = signal(this.synthEngineService.getPatch().oscillator2SubOctave);
+  protected oscillator2Invert = signal(this.synthEngineService.getPatch().oscillator2Invert);
+  protected glideTime = signal(this.synthEngineService.getPatch().glideTime);
 
   private readonly oscillatorTypes: OscillatorType[] = ['sine', 'square', 'sawtooth', 'triangle'];
 

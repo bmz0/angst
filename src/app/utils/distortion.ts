@@ -1,31 +1,31 @@
-import { makeSoftClipCurve, makeHardClipCurve } from './distortionCurves.js';
+import { makeSoftClipCurve, makeFoldCurve } from './distortionCurves.js';
 
-export type DistortionType = 'soft' | 'hard';
+export type DistortionType = 'soft' | 'fold';
 
 export interface DistortionConfig {
   audioContext: BaseAudioContext;
   destination: AudioNode;
-  type: 'soft' | 'hard';
+  type: 'soft' | 'fold';
   amount: number;
   enabled: boolean;
 }
 
 export interface DistortionParameters {
   enabled?: boolean;
-  type?: 'soft' | 'hard';
+  type?: 'soft' | 'fold';
   amount?: number;
 }
 
 export class DistortionController {
   static SOFT_CURVE_FN = makeSoftClipCurve;
-  static HARD_CURVE_FN = makeHardClipCurve;
+  static FOLD_CURVE_FN = makeFoldCurve;
   private inputNode: GainNode;
   private dryGainNode: GainNode;
   private wetGainNode: GainNode;
   private waveShaperNode: WaveShaperNode;
   private readonly audioContext: BaseAudioContext;
   private enabled: boolean;
-  private type: 'soft' | 'hard';
+  private type: 'soft' | 'fold';
   private amount: number;
 
   constructor(config: DistortionConfig) {
@@ -99,9 +99,9 @@ export class DistortionController {
   private updateCurve(): void {
     if (this.type === 'soft') {
       this.waveShaperNode.curve = DistortionController.SOFT_CURVE_FN(this.amount);
-    } else if (this.type === 'hard') {
+    } else if (this.type === 'fold') {
       const threshold = 1.0 - (this.amount / 100);
-      this.waveShaperNode.curve = DistortionController.HARD_CURVE_FN(threshold);
+      this.waveShaperNode.curve = DistortionController.FOLD_CURVE_FN(threshold);
     }
   }
 

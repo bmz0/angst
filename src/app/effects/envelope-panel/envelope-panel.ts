@@ -10,10 +10,10 @@ import { SynthEngineService } from '../../services/synth-engine.service.js';
 export class EnvelopePanel {
   private readonly synthEngineService = inject(SynthEngineService);
 
-  protected envelopeAttack = signal(0.005);
-  protected envelopeDecay = signal(0.1);
-  protected envelopeSustain = signal(0.7);
-  protected envelopeRelease = signal(0.5);
+  protected envelopeAttack = signal(this.synthEngineService.getPatch().envelopeAttack);
+  protected envelopeDecay = signal(this.synthEngineService.getPatch().envelopeDecay);
+  protected envelopeSustain = signal(this.synthEngineService.getPatch().envelopeSustain);
+  protected envelopeRelease = signal(this.synthEngineService.getPatch().envelopeRelease);
 
   getRelease(): number {
     return this.envelopeRelease();

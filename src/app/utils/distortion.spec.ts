@@ -6,10 +6,10 @@ describe('DistortionController', () => {
   let destination: AudioNode;
   let controller: DistortionController;
   const makeSoftClipCurve = vi.fn((amount: number) => new Float32Array([0, amount, 1]));
-  const makeHardClipCurve = vi.fn((threshold: number = 0.5) => new Float32Array([0, threshold, 1]));
+  const makeFoldCurve = vi.fn((threshold: number = 0.5) => new Float32Array([0, threshold, 1]));
 
   DistortionController.SOFT_CURVE_FN = makeSoftClipCurve;
-  DistortionController.HARD_CURVE_FN = makeHardClipCurve;
+  DistortionController.FOLD_CURVE_FN = makeFoldCurve;
 
   beforeEach(() => {
     audioContext = new OfflineAudioContext({
@@ -34,18 +34,18 @@ describe('DistortionController', () => {
       expect(makeSoftClipCurve).toHaveBeenCalledWith(50);
     });
 
-    it('should create with hard distortion disabled', () => {
+    it('should create with fold distortion disabled', () => {
       controller = new DistortionController({
         audioContext,
         destination,
-        type: 'hard',
+        type: 'fold',
         amount: 75,
         enabled: false
       });
 
       expect(controller).toBeDefined();
       const threshold = 1.0 - (75 / 100);
-      expect(makeHardClipCurve).toHaveBeenCalledWith(threshold);
+      expect(makeFoldCurve).toHaveBeenCalledWith(threshold);
     });
 
     it('should set initial gain values when enabled', () => {
@@ -95,11 +95,11 @@ describe('DistortionController', () => {
       expect(makeSoftClipCurve).not.toHaveBeenCalled(); // Only updateBypass called
     });
 
-    it('should change distortion type from soft to hard', () => {
-      controller.setParameters({ type: 'hard' });
+    it('should change distortion type from soft to fold', () => {
+      controller.setParameters({ type: 'fold' });
 
       const threshold = 1.0 - (30 / 100); // amount is still 30
-      expect(makeHardClipCurve).toHaveBeenCalledWith(threshold);
+      expect(makeFoldCurve).toHaveBeenCalledWith(threshold);
     });
 
     it('should update soft distortion amount', () => {
@@ -108,53 +108,53 @@ describe('DistortionController', () => {
       expect(makeSoftClipCurve).toHaveBeenCalledWith(80);
     });
 
-    it('should update hard distortion threshold when amount changes', () => {
-      controller.setParameters({ type: 'hard' });
+    it('should update fold distortion threshold when amount changes', () => {
+      controller.setParameters({ type: 'fold' });
       vi.clearAllMocks();
 
       controller.setParameters({ amount: 60 });
 
       const threshold = 1.0 - (60 / 100);
-      expect(makeHardClipCurve).toHaveBeenCalledWith(threshold);
+      expect(makeFoldCurve).toHaveBeenCalledWith(threshold);
     });
 
     it('should update curve when both type and amount change', () => {
       controller.setParameters({ 
-        type: 'hard',
+        type: 'fold',
         amount: 90 
       });
 
       const threshold = 1.0 - (90 / 100);
-      expect(makeHardClipCurve).toHaveBeenCalledWith(threshold);
+      expect(makeFoldCurve).toHaveBeenCalledWith(threshold);
       // Should only call once despite two parameters changing
-      expect(makeHardClipCurve).toHaveBeenCalledTimes(1);
+      expect(makeFoldCurve).toHaveBeenCalledTimes(1);
     });
 
     it('should handle multiple parameter updates correctly', () => {
       controller.setParameters({
         enabled: true,
-        type: 'hard',
+        type: 'fold',
         amount: 45
       });
 
       const threshold = 1.0 - (45 / 100);
-      expect(makeHardClipCurve).toHaveBeenCalledWith(threshold);
+      expect(makeFoldCurve).toHaveBeenCalledWith(threshold);
     });
 
     it('should not update curve when only enabled changes', () => {
       controller.setParameters({ enabled: true });
 
       expect(makeSoftClipCurve).not.toHaveBeenCalled();
-      expect(makeHardClipCurve).not.toHaveBeenCalled();
+      expect(makeFoldCurve).not.toHaveBeenCalled();
     });
   });
 
-  describe('hard clipping threshold calculation', () => {
+  describe('fold threshold calculation', () => {
     beforeEach(() => {
       controller = new DistortionController({
         audioContext,
         destination,
-        type: 'hard',
+        type: 'fold',
         amount: 0,
         enabled: true
       });
@@ -164,19 +164,19 @@ describe('DistortionController', () => {
     it('should calculate threshold as 1.0 when amount is 0', () => {
       controller.setParameters({ amount: 0 });
 
-      expect(makeHardClipCurve).toHaveBeenCalledWith(1.0);
+      expect(makeFoldCurve).toHaveBeenCalledWith(1.0);
     });
 
     it('should calculate threshold as 0.5 when amount is 50', () => {
       controller.setParameters({ amount: 50 });
 
-      expect(makeHardClipCurve).toHaveBeenCalledWith(0.5);
+      expect(makeFoldCurve).toHaveBeenCalledWith(0.5);
     });
 
     it('should calculate threshold as 0.0 when amount is 100', () => {
       controller.setParameters({ amount: 100 });
 
-      expect(makeHardClipCurve).toHaveBeenCalledWith(0.0);
+      expect(makeFoldCurve).toHaveBeenCalledWith(0.0);
     });
   });
 

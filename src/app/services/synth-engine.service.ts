@@ -1,12 +1,18 @@
 import { Injectable, inject } from '@angular/core';
 import { AudioContextService } from './audio-context.service.js';
 import { SynthEngine, SynthEngineConfig, SynthEngineParameters } from '../synth/synthEngine.js';
+import {
+  DEFAULT_PATCH,
+  SynthPatch,
+  synthPatchToEngineParameters,
+} from '../synth/synth-patch.js';
 
 @Injectable({ providedIn: 'root' })
 export class SynthEngineService {
   private engine?: SynthEngine;
   private analyser?: AnalyserNode;
   private readonly audioCtx = inject(AudioContextService);
+  private currentPatch: SynthPatch = { ...DEFAULT_PATCH };
 
   initialize(config: Omit<SynthEngineConfig, 'audioContext' | 'destination'>): void {
     const ctx = this.audioCtx.getContext()!;
@@ -25,8 +31,58 @@ export class SynthEngineService {
     return this.analyser;
   }
 
+  getPatch(): Readonly<SynthPatch> {
+    return this.currentPatch;
+  }
+
+  /**
+   * Applies all engine-relevant fields from the patch to the running engine and
+   * updates the tracked patch state. Arpeggiator fields are stored in the patch
+   * but not forwarded to the engine (managed by ArpeggiatorPanel directly).
+   */
+  applyPatch(patch: SynthPatch): void {
+    this.currentPatch = { ...patch };
+    this.engine?.setParameters(synthPatchToEngineParameters(patch));
+  }
+
   setParameters(params: SynthEngineParameters): void {
     this.engine?.setParameters(params);
+    this.syncPatchFromParameters(params);
+  }
+
+  private syncPatchFromParameters(params: SynthEngineParameters): void {
+    const p: Partial<SynthPatch> = {};
+
+    if (params.oscillator1Type !== undefined) p.oscillator1Type = params.oscillator1Type;
+    if (params.oscillator2Type !== undefined) p.oscillator2Type = params.oscillator2Type;
+    if (params.oscillator1Amount !== undefined) p.oscillator1Amount = params.oscillator1Amount;
+    if (params.oscillator2Amount !== undefined) p.oscillator2Amount = params.oscillator2Amount;
+    if (params.oscillator2SubOctave !== undefined) p.oscillator2SubOctave = params.oscillator2SubOctave;
+    if (params.oscillator2Invert !== undefined) p.oscillator2Invert = params.oscillator2Invert;
+    if (params.glideTime !== undefined) p.glideTime = params.glideTime;
+
+    if (params.filter?.enabled !== undefined) p.filterEnabled = params.filter.enabled;
+    if (params.filter?.type !== undefined) p.filterType = params.filter.type;
+    if (params.filter?.frequency !== undefined) p.filterFrequency = params.filter.frequency;
+    if (params.filter?.Q !== undefined) p.filterQ = params.filter.Q;
+    if (params.filter?.keyboardTracking !== undefined) p.filterKeyboardTracking = params.filter.keyboardTracking;
+    if (params.filter?.postGain !== undefined) p.filterPostGain = params.filter.postGain;
+
+    if (params.envelope?.attack !== undefined) p.envelopeAttack = params.envelope.attack;
+    if (params.envelope?.decay !== undefined) p.envelopeDecay = params.envelope.decay;
+    if (params.envelope?.sustain !== undefined) p.envelopeSustain = params.envelope.sustain;
+    if (params.envelope?.release !== undefined) p.envelopeRelease = params.envelope.release;
+
+    if (params.distortion?.enabled !== undefined) p.distortionEnabled = params.distortion.enabled;
+    if (params.distortion?.type !== undefined) p.distortionType = params.distortion.type;
+    if (params.distortion?.amount !== undefined) p.distortionAmount = params.distortion.amount;
+
+    if (params.delay?.enabled !== undefined) p.delayEnabled = params.delay.enabled;
+    if (params.delay?.delayTime !== undefined) p.delayTime = params.delay.delayTime;
+    if (params.delay?.feedback !== undefined) p.delayFeedback = params.delay.feedback;
+    if (params.delay?.mix !== undefined) p.delayMix = params.delay.mix;
+
+    this.currentPatch = { ...this.currentPatch, ...p };
   }
 
   play(frequency: number): void {

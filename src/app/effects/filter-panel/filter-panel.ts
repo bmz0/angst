@@ -11,12 +11,12 @@ import { SynthEngineService } from '../../services/synth-engine.service.js';
 export class FilterPanel {
   private readonly synthEngineService = inject(SynthEngineService);
 
-  protected filterEnabled = signal(false);
-  protected filterType = signal<SupportedFilterType>('lowpass');
-  protected filterFrequency = signal(1000);
-  protected filterQ = signal(1);
-  protected filterKeyboardTracking = signal(0.5);
-  protected filterPostGain = signal(1);
+  protected filterEnabled = signal(this.synthEngineService.getPatch().filterEnabled);
+  protected filterType = signal<SupportedFilterType>(this.synthEngineService.getPatch().filterType);
+  protected filterFrequency = signal(this.synthEngineService.getPatch().filterFrequency);
+  protected filterQ = signal(this.synthEngineService.getPatch().filterQ);
+  protected filterKeyboardTracking = signal(this.synthEngineService.getPatch().filterKeyboardTracking);
+  protected filterPostGain = signal(this.synthEngineService.getPatch().filterPostGain);
 
   protected readonly filterTypes: SupportedFilterType[] = ['lowpass', 'highpass', 'bandpass'];
 

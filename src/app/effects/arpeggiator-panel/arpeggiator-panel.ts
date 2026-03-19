@@ -1,5 +1,6 @@
 import { Component, DestroyRef, inject, output, signal } from '@angular/core';
 import { ArpeggiatorController } from '../../utils/arpeggiator.js';
+import { DEFAULT_PATCH } from '../../synth/synth-patch.js';
 
 @Component({
   selector: 'arpeggiator-panel',
@@ -10,13 +11,13 @@ import { ArpeggiatorController } from '../../utils/arpeggiator.js';
 export class ArpeggiatorPanel {
   stoppedWhilePlaying = output<void>();
 
-  protected arpeggiatorEnabled = signal(false);
-  protected arpeggiatorTempo = signal(300);
-  protected arpeggiatorPattern = signal('037');
+  protected arpeggiatorEnabled = signal(DEFAULT_PATCH.arpeggiatorEnabled);
+  protected arpeggiatorTempo = signal(DEFAULT_PATCH.arpeggiatorTempo);
+  protected arpeggiatorPattern = signal(DEFAULT_PATCH.arpeggiatorPattern);
 
   private readonly arpeggiatorController = new ArpeggiatorController({
-    tempo: 300,
-    pattern: '037'
+    tempo: DEFAULT_PATCH.arpeggiatorTempo,
+    pattern: DEFAULT_PATCH.arpeggiatorPattern,
   });
 
   private readonly destroyRef = inject(DestroyRef);

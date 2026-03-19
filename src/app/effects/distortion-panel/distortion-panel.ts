@@ -10,9 +10,9 @@ import { SynthEngineService } from '../../services/synth-engine.service.js';
 export class DistortionPanel {
   private readonly synthEngineService = inject(SynthEngineService);
 
-  protected distortionEnabled = signal(false);
-  protected distortionAmount = signal(0);
-  protected distortionFold = signal(false);
+  protected distortionEnabled = signal(this.synthEngineService.getPatch().distortionEnabled);
+  protected distortionAmount = signal(this.synthEngineService.getPatch().distortionAmount);
+  protected distortionFold = signal(this.synthEngineService.getPatch().distortionType === 'fold');
 
   protected toggleDistortion(): void {
     this.distortionEnabled.update(enabled => !enabled);
@@ -27,7 +27,7 @@ export class DistortionPanel {
   protected toggleDistortionFold(): void {
     this.distortionFold.update(fold => !fold);
     this.synthEngineService.setParameters({
-      distortion: { type: this.distortionFold() ? 'hard' : 'soft' }
+      distortion: { type: this.distortionFold() ? 'fold' : 'soft' }
     });
   }
 }

@@ -102,7 +102,7 @@ export class SynthEngine {
     this.distortionController = new DistortionController({
       audioContext: this.audioContext,
       destination: this.filterController.getInput(),
-      type: config.distortionFold ? 'hard' : 'soft',
+      type: config.distortionFold ? 'fold' : 'soft',
       amount: config.distortionAmount ?? 0,
       enabled: config.distortionEnabled ?? false
     });
