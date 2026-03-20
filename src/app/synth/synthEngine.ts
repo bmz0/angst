@@ -123,6 +123,7 @@ export class SynthEngine {
       audioContext: this.audioContext,
       type: config.oscillator2Type ?? 'square',
       gain: this.oscillator2Amount,
+      invert: this.oscillator2Invert,
       frequency: 220,
       destination: this.mixerGain
     });

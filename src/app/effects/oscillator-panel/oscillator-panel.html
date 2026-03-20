@@ -19,38 +19,35 @@
 </div>
 
 <div class="oscillator-section">
+  <fieldset class="oscillator-controls">
+    <legend>Oscillator 2</legend>
+    <label for="oscillator2-sub-octave">Sub-Octave
+      <input
+        type="checkbox"
+        id="oscillator2-sub-octave"
+        [checked]="oscillator2SubOctave()"
+        (change)="toggleOscillator2SubOctave()"
+      />
+    </label>
+
+    <label for="oscillator2-invert">Invert
+      <input
+        type="checkbox"
+        id="oscillator2-invert"
+        [checked]="oscillator2Invert()"
+        (change)="onOscillator2InvertChange()"
+      />
+    </label>
+  </fieldset>
   <label>
     Glide:
     <input
       type="range"
       min="0"
-      max="1"
+      max="0.5"
       step="0.001"
       [value]="glideTime()"
       (input)="onGlideTimeChange(+$any($event.target).value)">
     <span>{{ glideTime() * 1000 }}ms</span>
   </label>
-
-  <div class="oscillator-controls">
-    <fieldset>
-      <legend>Oscillator 2</legend>
-      <label for="oscillator2-sub-octave">Sub-Octave
-        <input
-          type="checkbox"
-          id="oscillator2-sub-octave"
-          [checked]="oscillator2SubOctave()"
-          (change)="toggleOscillator2SubOctave()"
-        />
-      </label>
-
-      <label for="oscillator2-invert">Invert
-        <input
-          type="checkbox"
-          id="oscillator2-invert"
-          [checked]="oscillator2Invert()"
-          (change)="onOscillator2InvertChange()"
-        />
-      </label>
-    </fieldset>
-  </div>
 </div>
