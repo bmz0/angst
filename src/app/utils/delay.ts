@@ -1,12 +1,12 @@
 export interface DelayConfig {
-  audioContext: AudioContext;
+  audioContext: BaseAudioContext;
   destination: AudioNode;
   delayTime: number;
   feedback: number;
   mix: number;
   enabled: boolean;
   pingPong?: boolean;
-  pingPongWidth?: number;
+  delayPan?: number;
 }
 
 export interface DelayParameters {
@@ -15,7 +15,7 @@ export interface DelayParameters {
   feedback?: number;
   mix?: number;
   pingPong?: boolean;
-  pingPongWidth?: number;
+  delayPan?: number;
 }
 
 export class DelayController {
@@ -25,11 +25,12 @@ export class DelayController {
   private dryGainNode: GainNode;
   private wetGainNode: GainNode;
   private stereoPannerNode: StereoPannerNode;
-  private readonly audioContext: AudioContext;
+  private readonly audioContext: BaseAudioContext;
   private enabled: boolean;
   private mix: number;
   private pingPong: boolean;
-  private pingPongWidth: number;
+  private delayPan: number;
+  private currentPan: number;
   private panDirection: number;
   private pingPongInterval?: number;
 
@@ -38,7 +39,8 @@ export class DelayController {
     this.enabled = config.enabled;
     this.mix = config.mix;
     this.pingPong = config.pingPong ?? true;
-    this.pingPongWidth = config.pingPongWidth ?? 0.3;
+    this.delayPan = config.delayPan ?? 0;
+    this.currentPan = this.delayPan;
     this.panDirection = 1;
 
     this.inputNode = this.audioContext.createGain();
@@ -51,7 +53,7 @@ export class DelayController {
     this.feedbackNode.gain.value = config.feedback;
 
     this.stereoPannerNode = this.audioContext.createStereoPanner();
-    this.stereoPannerNode.pan.value = this.pingPongWidth * this.panDirection;
+    this.stereoPannerNode.pan.value = this.currentPan;
 
     this.dryGainNode = this.audioContext.createGain();
     this.dryGainNode.gain.value = 1;
@@ -67,23 +69,55 @@ export class DelayController {
     this.wetGainNode.connect(config.destination);
 
     this.updateBypass();
+    if (this.enabled && this.pingPong) {
+      this.startPingPong();
+    }
   }
 
   getInput(): GainNode {
     return this.inputNode;
   }
 
-  swicthPan(): void {
+  getCurrentPan(): number {
+    return this.currentPan;
+  }
+
+  isPingPong(): boolean {
+    return this.pingPong;
+  }
+
+  getDelayPan(): number {
+    return this.delayPan;
+  }
+
+  private setPanWithRamp(targetPan: number, now: number): void {
+    const rampTime = this.delayNode.delayTime.value / 2;
+    this.stereoPannerNode.pan.cancelScheduledValues(now);
+    this.stereoPannerNode.pan.setValueAtTime(this.currentPan, now);
+    this.stereoPannerNode.pan.linearRampToValueAtTime(targetPan, now + rampTime);
+  }
+
+  private startPingPong(): void {
+    clearInterval(this.pingPongInterval);
+    this.panDirection = 1;
+    this.currentPan = this.delayPan;
+    this.stereoPannerNode.pan.cancelScheduledValues(this.audioContext.currentTime);
+    this.stereoPannerNode.pan.setValueAtTime(this.delayPan, this.audioContext.currentTime);
+    this.pingPongInterval = setInterval(
+      () => this.switchPan(),
+      this.delayNode.delayTime.value * 1000
+    );
+  }
+
+  switchPan(): void {
     if (!this.pingPong) {
       return;
     }
 
     this.panDirection *= -1;
     const now = this.audioContext.currentTime;
-    this.stereoPannerNode.pan.setValueAtTime(
-      this.panDirection * this.pingPongWidth,
-      now
-    );
+    this.currentPan = this.panDirection * this.delayPan;
+    this.setPanWithRamp(this.currentPan, now);
   }
 
   setParameters(params: DelayParameters): void {
@@ -93,8 +127,8 @@ export class DelayController {
     if (params.enabled !== undefined) {
       this.enabled = params.enabled;
       shouldUpdateBypass = true;
-      if (this.enabled) {
-        this.pingPongInterval = setInterval(() => this.swicthPan(), this.delayNode.delayTime.value * 1000); 
+      if (this.enabled && this.pingPong) {
+        this.startPingPong();
       } else {
         clearInterval(this.pingPongInterval);
       }
@@ -104,7 +138,6 @@ export class DelayController {
       this.mix = params.mix;
       if (this.enabled) {
         this.wetGainNode.gain.setValueAtTime(params.mix, now);
-        this.dryGainNode.gain.setValueAtTime(1, now);
       }
     }
 
@@ -119,18 +152,23 @@ export class DelayController {
     if (params.pingPong !== undefined) {
       this.pingPong = params.pingPong;
       if (!this.pingPong) {
-        this.stereoPannerNode.pan.setValueAtTime(0, now);
+        clearInterval(this.pingPongInterval);
         this.panDirection = 1;
+        this.currentPan = this.delayPan;
+        this.setPanWithRamp(this.delayPan, now);
+      } else if (this.enabled) {
+        this.startPingPong();
       }
     }
 
-    if (params.pingPongWidth !== undefined) {
-      this.pingPongWidth = params.pingPongWidth;
-      if (this.pingPong) {
-        this.stereoPannerNode.pan.setValueAtTime(
-          this.panDirection * this.pingPongWidth,
-          now
-        );
+    if (params.delayPan !== undefined) {
+      this.delayPan = params.delayPan;
+      if (!this.pingPong) {
+        this.currentPan = this.delayPan;
+        this.setPanWithRamp(this.delayPan, now);
+      } else {
+        this.currentPan = this.panDirection * this.delayPan;
+        this.setPanWithRamp(this.currentPan, now);
       }
     }
 

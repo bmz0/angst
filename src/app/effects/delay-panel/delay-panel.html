@@ -43,4 +43,24 @@
       (input)="onDelayMixChange(+$any($event.target).value)">
     <span>{{ (delayMix() * 100).toFixed(0) }}%</span>
   </label>
+
+  <label>
+    <input
+      type="checkbox"
+      [checked]="delayPingPong()"
+      (change)="togglePingPong()">
+    Ping-pong
+  </label>
+
+  <label>
+    Pan:
+    <input
+      type="range"
+      min="-1"
+      max="1"
+      step="0.01"
+      [value]="delayPan()"
+      (input)="onDelayPanChange(+$any($event.target).value)">
+    <span>{{ getDelayPanLabel() }}</span>
+  </label>
 }

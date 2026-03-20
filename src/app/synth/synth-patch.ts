@@ -37,6 +37,8 @@ export interface SynthPatch {
   delayTime: number;
   delayFeedback: number;
   delayMix: number;
+  delayPingPong: boolean;
+  delayPan: number;
 
   // Arpeggiator
   arpeggiatorEnabled: boolean;
@@ -73,6 +75,8 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   delayTime: 0.3,
   delayFeedback: 0.3,
   delayMix: 0.3,
+  delayPingPong: true,
+  delayPan: 0.3,
 
   arpeggiatorEnabled: false,
   arpeggiatorTempo: 300,
@@ -165,6 +169,8 @@ export function synthPatchFromJson(json: string): SynthPatch {
     delayTime: requireNumber('delayTime'),
     delayFeedback: requireNumber('delayFeedback'),
     delayMix: requireNumber('delayMix'),
+    delayPingPong: requireBoolean('delayPingPong'),
+    delayPan: requireNumber('delayPan'),
 
     arpeggiatorEnabled: requireBoolean('arpeggiatorEnabled'),
     arpeggiatorTempo: requireNumber('arpeggiatorTempo'),
@@ -213,6 +219,8 @@ export function synthPatchToEngineConfig(
     delayTime: patch.delayTime,
     delayFeedback: patch.delayFeedback,
     delayMix: patch.delayMix,
+    delayPingPong: patch.delayPingPong,
+    delayPan: patch.delayPan,
   };
 }
 
@@ -257,6 +265,8 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
       delayTime: patch.delayTime,
       feedback: patch.delayFeedback,
       mix: patch.delayMix,
+      pingPong: patch.delayPingPong,
+      delayPan: patch.delayPan,
     },
   };
 }

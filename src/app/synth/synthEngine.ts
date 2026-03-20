@@ -27,6 +27,8 @@ export interface SynthEngineConfig {
   delayTime?: number;
   delayFeedback?: number;
   delayMix?: number;
+  delayPingPong?: boolean;
+  delayPan?: number;
   envelopeAttack?: number;
   envelopeDecay?: number;
   envelopeSustain?: number;
@@ -76,7 +78,9 @@ export class SynthEngine {
       delayTime: config.delayTime ?? 0.3,
       feedback: config.delayFeedback ?? 0.3,
       mix: config.delayMix ?? 0.3,
-      enabled: config.delayEnabled ?? false
+      enabled: config.delayEnabled ?? false,
+      pingPong: config.delayPingPong ?? true,
+      delayPan: config.delayPan ?? 0,
     });
 
     this.envelopeController = new EnvelopeController({

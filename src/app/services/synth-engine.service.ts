@@ -81,6 +81,8 @@ export class SynthEngineService {
     if (params.delay?.delayTime !== undefined) p.delayTime = params.delay.delayTime;
     if (params.delay?.feedback !== undefined) p.delayFeedback = params.delay.feedback;
     if (params.delay?.mix !== undefined) p.delayMix = params.delay.mix;
+    if (params.delay?.pingPong !== undefined) p.delayPingPong = params.delay.pingPong;
+    if (params.delay?.delayPan !== undefined) p.delayPan = params.delay.delayPan;
 
     this.currentPatch = { ...this.currentPatch, ...p };
   }
