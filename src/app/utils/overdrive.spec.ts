@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { DistortionController } from './distortion.js';
+import { OverdriveController } from './overdrive.js';
 
-describe('DistortionController', () => {
+describe('OverdriveController', () => {
   let audioContext: BaseAudioContext;
   let destination: AudioNode;
-  let controller: DistortionController;
+  let controller: OverdriveController;
   const makeSoftClipCurve = vi.fn((amount: number) => new Float32Array([0, amount, 1]));
   const makeFoldCurve = vi.fn((threshold: number = 0.5) => new Float32Array([0, threshold, 1]));
 
-  DistortionController.SOFT_CURVE_FN = makeSoftClipCurve;
-  DistortionController.FOLD_CURVE_FN = makeFoldCurve;
+  OverdriveController.SOFT_CURVE_FN = makeSoftClipCurve;
+  OverdriveController.FOLD_CURVE_FN = makeFoldCurve;
 
   beforeEach(() => {
     audioContext = new OfflineAudioContext({
@@ -21,8 +21,8 @@ describe('DistortionController', () => {
   });
 
   describe('constructor', () => {
-    it('should create with soft distortion enabled', () => {
-      controller = new DistortionController({
+    it('should create with soft overdrive enabled', () => {
+      controller = new OverdriveController({
         audioContext,
         destination,
         type: 'soft',
@@ -34,8 +34,8 @@ describe('DistortionController', () => {
       expect(makeSoftClipCurve).toHaveBeenCalledWith(50);
     });
 
-    it('should create with fold distortion disabled', () => {
-      controller = new DistortionController({
+    it('should create with fold overdrive disabled', () => {
+      controller = new OverdriveController({
         audioContext,
         destination,
         type: 'fold',
@@ -49,7 +49,7 @@ describe('DistortionController', () => {
     });
 
     it('should set initial gain values when enabled', () => {
-      controller = new DistortionController({
+      controller = new OverdriveController({
         audioContext,
         destination,
         type: 'soft',
@@ -62,7 +62,7 @@ describe('DistortionController', () => {
     });
 
     it('should set initial gain values when disabled', () => {
-      controller = new DistortionController({
+      controller = new OverdriveController({
         audioContext,
         destination,
         type: 'soft',
@@ -77,7 +77,7 @@ describe('DistortionController', () => {
 
   describe('setParameters', () => {
     beforeEach(() => {
-      controller = new DistortionController({
+      controller = new OverdriveController({
         audioContext,
         destination,
         type: 'soft',
@@ -87,7 +87,7 @@ describe('DistortionController', () => {
       vi.clearAllMocks();
     });
 
-    it('should enable distortion', () => {
+    it('should enable overdrive', () => {
       controller.setParameters({ enabled: true });
       
       // Verify bypass state changed (wet gain should be 1, dry should be 0)
@@ -95,20 +95,20 @@ describe('DistortionController', () => {
       expect(makeSoftClipCurve).not.toHaveBeenCalled(); // Only updateBypass called
     });
 
-    it('should change distortion type from soft to fold', () => {
+    it('should change overdrive type from soft to fold', () => {
       controller.setParameters({ type: 'fold' });
 
       const threshold = 1.0 - (30 / 100); // amount is still 30
       expect(makeFoldCurve).toHaveBeenCalledWith(threshold);
     });
 
-    it('should update soft distortion amount', () => {
+    it('should update soft overdrive amount', () => {
       controller.setParameters({ amount: 80 });
 
       expect(makeSoftClipCurve).toHaveBeenCalledWith(80);
     });
 
-    it('should update fold distortion threshold when amount changes', () => {
+    it('should update fold overdrive threshold when amount changes', () => {
       controller.setParameters({ type: 'fold' });
       vi.clearAllMocks();
 
@@ -151,7 +151,7 @@ describe('DistortionController', () => {
 
   describe('fold threshold calculation', () => {
     beforeEach(() => {
-      controller = new DistortionController({
+      controller = new OverdriveController({
         audioContext,
         destination,
         type: 'fold',
@@ -182,7 +182,7 @@ describe('DistortionController', () => {
 
   describe('disconnect', () => {
     it('should disconnect all nodes', () => {
-      controller = new DistortionController({
+      controller = new OverdriveController({
         audioContext,
         destination,
         type: 'soft',
@@ -197,7 +197,7 @@ describe('DistortionController', () => {
 
   describe('audio routing', () => {
     it('should have input node connected properly', () => {
-      controller = new DistortionController({
+      controller = new OverdriveController({
         audioContext,
         destination,
         type: 'soft',

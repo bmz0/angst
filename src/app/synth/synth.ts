@@ -2,7 +2,7 @@ import { Component, viewChild, signal, DestroyRef, inject } from '@angular/core'
 import { Keyboard } from '../keyboard/keyboard.js';
 import { Visualizer } from '../visualizer/visualizer.js';
 import { OscillatorPanel } from '../effects/oscillator-panel/oscillator-panel.js';
-import { DistortionPanel } from '../effects/distortion-panel/distortion-panel.js';
+import { OverdrivePanel } from '../effects/overdrive-panel/overdrive-panel.js';
 import { FilterPanel } from '../effects/filter-panel/filter-panel.js';
 import { EnvelopePanel } from '../effects/envelope-panel/envelope-panel.js';
 import { DelayPanel } from '../effects/delay-panel/delay-panel.js';
@@ -13,7 +13,7 @@ import { DEFAULT_PATCH, synthPatchToEngineConfig } from './synth-patch.js';
 
 @Component({
   selector: 'app-synth',
-  imports: [Keyboard, Visualizer, OscillatorPanel, DistortionPanel, FilterPanel, EnvelopePanel, DelayPanel, ArpeggiatorPanel],
+  imports: [Keyboard, Visualizer, OscillatorPanel, OverdrivePanel, FilterPanel, EnvelopePanel, DelayPanel, ArpeggiatorPanel],
   templateUrl: './synth.html',
   styleUrl: './synth.css',
   standalone: true

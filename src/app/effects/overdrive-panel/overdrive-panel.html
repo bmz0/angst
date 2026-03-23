@@ -1,0 +1,31 @@
+<fieldset>
+  <legend>Overdrive</legend>
+  <div class="options">
+    <label>
+      <input
+        type="checkbox"
+        [checked]="overdriveEnabled()"
+        (change)="toggleOverdrive()">
+      Enable
+    </label>
+
+    <label [class.hidden]="!overdriveEnabled()">
+      <input
+        type="checkbox"
+        [checked]="overdriveFold()"
+        (change)="toggleOverdriveFold()">
+      Fold
+    </label>
+  </div>
+
+  <label [class.hidden]="!overdriveEnabled()">
+    Amount:
+    <input
+      type="range"
+      min="0"
+      max="100"
+      [value]="overdriveAmount()"
+      (input)="onOverdriveAmountChange(+$any($event.target).value)">
+    <span class="amount">{{ overdriveAmount() }}</span>
+  </label>
+</fieldset>

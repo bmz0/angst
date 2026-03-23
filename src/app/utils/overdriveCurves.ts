@@ -1,6 +1,6 @@
 /**
- * Creates a soft clipping/overdrive distortion curve using arctangent-like waveshaping.
- * @param amount - Distortion intensity (0 = clean, higher values = more distortion)
+ * Creates a soft clipping overdrive curve using arctangent-like waveshaping.
+ * @param amount - Overdrive intensity (0 = clean, higher values = more overdrive)
  * @param samples - Number of samples in the curve (default: 48000)
  * @returns Float32Array suitable for WaveShaperNode.curve
  */
@@ -70,7 +70,7 @@ export function makeFoldCurve(threshold: number = 0.5, samples: number = 48000) 
 }
 
 /**
- * Creates a bypass curve (linear pass-through, no distortion).
+ * Creates a bypass curve (linear pass-through, no overdrive).
  * @param samples - Number of samples in the curve (default: 48000)
  * @returns Float32Array with identity mapping
  */

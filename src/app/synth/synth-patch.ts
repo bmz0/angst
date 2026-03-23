@@ -1,6 +1,6 @@
 import type { OscillatorType } from '../utils/oscillator.js';
 import type { SupportedFilterType } from '../utils/filter.js';
-import type { DistortionType } from '../utils/distortion.js';
+import type { OverdriveType } from '../utils/overdrive.js';
 import type { SynthEngineConfig, SynthEngineParameters } from './synthEngine.js';
 
 export interface SynthPatch {
@@ -32,10 +32,10 @@ export interface SynthPatch {
   envelopeSustain: number;
   envelopeRelease: number;
 
-  // Distortion
-  distortionEnabled: boolean;
-  distortionType: DistortionType;
-  distortionAmount: number;
+  // Overdrive
+  overdriveEnabled: boolean;
+  overdriveType: OverdriveType;
+  overdriveAmount: number;
 
   // Delay
   delayEnabled: boolean;
@@ -77,9 +77,9 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   envelopeSustain: 0.7,
   envelopeRelease: 0.62,
 
-  distortionEnabled: true,
-  distortionType: 'fold',
-  distortionAmount: 75,
+  overdriveEnabled: true,
+  overdriveType: 'fold',
+  overdriveAmount: 75,
 
   delayEnabled: true,
   delayTime: 0.3,
@@ -176,9 +176,9 @@ export function synthPatchFromJson(json: string): SynthPatch {
     envelopeSustain: requireNumber('envelopeSustain'),
     envelopeRelease: requireNumber('envelopeRelease'),
 
-    distortionEnabled: requireBoolean('distortionEnabled'),
-    distortionType: requireEnum('distortionType', DISTORTION_TYPES) as DistortionType,
-    distortionAmount: requireNumber('distortionAmount'),
+    overdriveEnabled: requireBoolean('overdriveEnabled'),
+    overdriveType: requireEnum('overdriveType', DISTORTION_TYPES) as OverdriveType,
+    overdriveAmount: requireNumber('overdriveAmount'),
 
     delayEnabled: requireBoolean('delayEnabled'),
     delayTime: requireNumber('delayTime'),
@@ -231,9 +231,9 @@ export function synthPatchToEngineConfig(
     envelopeSustain: patch.envelopeSustain,
     envelopeRelease: patch.envelopeRelease,
 
-    distortionEnabled: patch.distortionEnabled,
-    distortionFold: patch.distortionType === 'fold',
-    distortionAmount: patch.distortionAmount,
+    overdriveEnabled: patch.overdriveEnabled,
+    overdriveFold: patch.overdriveType === 'fold',
+    overdriveAmount: patch.overdriveAmount,
 
     delayEnabled: patch.delayEnabled,
     delayTime: patch.delayTime,
@@ -279,10 +279,10 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
       release: patch.envelopeRelease,
     },
 
-    distortion: {
-      enabled: patch.distortionEnabled,
-      type: patch.distortionType,
-      amount: patch.distortionAmount,
+    overdrive: {
+      enabled: patch.overdriveEnabled,
+      type: patch.overdriveType,
+      amount: patch.overdriveAmount,
     },
 
     delay: {

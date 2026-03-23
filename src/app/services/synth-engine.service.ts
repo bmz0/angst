@@ -78,9 +78,9 @@ export class SynthEngineService {
     if (params.envelope?.sustain !== undefined) p.envelopeSustain = params.envelope.sustain;
     if (params.envelope?.release !== undefined) p.envelopeRelease = params.envelope.release;
 
-    if (params.distortion?.enabled !== undefined) p.distortionEnabled = params.distortion.enabled;
-    if (params.distortion?.type !== undefined) p.distortionType = params.distortion.type;
-    if (params.distortion?.amount !== undefined) p.distortionAmount = params.distortion.amount;
+    if (params.overdrive?.enabled !== undefined) p.overdriveEnabled = params.overdrive.enabled;
+    if (params.overdrive?.type !== undefined) p.overdriveType = params.overdrive.type;
+    if (params.overdrive?.amount !== undefined) p.overdriveAmount = params.overdrive.amount;
 
     if (params.delay?.enabled !== undefined) p.delayEnabled = params.delay.enabled;
     if (params.delay?.delayTime !== undefined) p.delayTime = params.delay.delayTime;

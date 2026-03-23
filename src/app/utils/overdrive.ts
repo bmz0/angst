@@ -1,8 +1,8 @@
-import { makeSoftClipCurve, makeFoldCurve } from './distortionCurves.js';
+import { makeSoftClipCurve, makeFoldCurve } from './overdriveCurves.js';
 
-export type DistortionType = 'soft' | 'fold';
+export type OverdriveType = 'soft' | 'fold';
 
-export interface DistortionConfig {
+export interface OverdriveConfig {
   audioContext: BaseAudioContext;
   destination: AudioNode;
   type: 'soft' | 'fold';
@@ -10,13 +10,13 @@ export interface DistortionConfig {
   enabled: boolean;
 }
 
-export interface DistortionParameters {
+export interface OverdriveParameters {
   enabled?: boolean;
   type?: 'soft' | 'fold';
   amount?: number;
 }
 
-export class DistortionController {
+export class OverdriveController {
   static SOFT_CURVE_FN = makeSoftClipCurve;
   static FOLD_CURVE_FN = makeFoldCurve;
   private inputNode: GainNode;
@@ -28,7 +28,7 @@ export class DistortionController {
   private type: 'soft' | 'fold';
   private amount: number;
 
-  constructor(config: DistortionConfig) {
+  constructor(config: OverdriveConfig) {
     this.audioContext = config.audioContext;
     this.enabled = config.enabled;
     this.type = config.type;
@@ -57,7 +57,7 @@ export class DistortionController {
     return this.inputNode;
   }
 
-  setParameters(params: DistortionParameters): void {
+  setParameters(params: OverdriveParameters): void {
     let shouldUpdateBypass = false;
     let shouldUpdateCurve = false;
 
@@ -98,10 +98,10 @@ export class DistortionController {
 
   private updateCurve(): void {
     if (this.type === 'soft') {
-      this.waveShaperNode.curve = DistortionController.SOFT_CURVE_FN(this.amount);
+      this.waveShaperNode.curve = OverdriveController.SOFT_CURVE_FN(this.amount);
     } else if (this.type === 'fold') {
       const threshold = 1.0 - (this.amount / 100);
-      this.waveShaperNode.curve = DistortionController.FOLD_CURVE_FN(threshold);
+      this.waveShaperNode.curve = OverdriveController.FOLD_CURVE_FN(threshold);
     }
   }
 

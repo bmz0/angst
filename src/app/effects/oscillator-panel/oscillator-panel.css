@@ -1,8 +1,9 @@
 :host {
   display: flex;
-  gap: 2rem;
+  gap: 4rem;
   justify-content: center;
   align-items: center;
+  flex: 2;
 }
 
 fieldset {
@@ -17,7 +18,7 @@ fieldset {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  align-items: center;
+  align-items: stretch;
 }
 
 h3 {
@@ -31,8 +32,7 @@ h3 {
 
 .oscillator-controls {
   display: flex;
-  gap: 2rem;
-  justify-content: center;
+  gap: 1.5rem;
 }
 
 label {

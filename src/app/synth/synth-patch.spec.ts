@@ -24,7 +24,7 @@ describe('synthPatchToJson', () => {
       oscillator1Type: 'sawtooth' as const,
       filterEnabled: true,
       filterFrequency: 2500,
-      distortionType: 'fold' as const,
+      overdriveType: 'fold' as const,
       arpeggiatorPattern: '0357',
     };
     expect(synthPatchFromJson(synthPatchToJson(custom))).toEqual(custom);
@@ -88,9 +88,9 @@ describe('synthPatchFromJson', () => {
     expect(() => synthPatchFromJson(JSON.stringify(bad))).toThrow('"filterType"');
   });
 
-  it('throws when distortionType has an invalid enum value', () => {
-    const bad = { ...DEFAULT_PATCH, distortionType: 'fuzzy' };
-    expect(() => synthPatchFromJson(JSON.stringify(bad))).toThrow('"distortionType"');
+  it('throws when overdriveType has an invalid enum value', () => {
+    const bad = { ...DEFAULT_PATCH, overdriveType: 'fuzzy' };
+    expect(() => synthPatchFromJson(JSON.stringify(bad))).toThrow('"overdriveType"');
   });
 
   it('throws when a number field has a null value (e.g. from serialized NaN)', () => {
@@ -113,8 +113,8 @@ describe('synthPatchFromJson', () => {
   });
 
   it('throws when a boolean field is a number', () => {
-    const bad = { ...DEFAULT_PATCH, distortionEnabled: 1 };
-    expect(() => synthPatchFromJson(JSON.stringify(bad))).toThrow('"distortionEnabled"');
+    const bad = { ...DEFAULT_PATCH, overdriveEnabled: 1 };
+    expect(() => synthPatchFromJson(JSON.stringify(bad))).toThrow('"overdriveEnabled"');
   });
 
   it('does not throw when the JSON contains unknown extra fields', () => {
@@ -141,9 +141,9 @@ describe('synthPatchFromJson', () => {
     expect(patch.envelopeDecay).toBe(DEFAULT_PATCH.envelopeDecay);
     expect(patch.envelopeSustain).toBe(DEFAULT_PATCH.envelopeSustain);
     expect(patch.envelopeRelease).toBe(DEFAULT_PATCH.envelopeRelease);
-    expect(patch.distortionEnabled).toBe(DEFAULT_PATCH.distortionEnabled);
-    expect(patch.distortionType).toBe(DEFAULT_PATCH.distortionType);
-    expect(patch.distortionAmount).toBe(DEFAULT_PATCH.distortionAmount);
+    expect(patch.overdriveEnabled).toBe(DEFAULT_PATCH.overdriveEnabled);
+    expect(patch.overdriveType).toBe(DEFAULT_PATCH.overdriveType);
+    expect(patch.overdriveAmount).toBe(DEFAULT_PATCH.overdriveAmount);
     expect(patch.delayEnabled).toBe(DEFAULT_PATCH.delayEnabled);
     expect(patch.delayTime).toBe(DEFAULT_PATCH.delayTime);
     expect(patch.delayFeedback).toBe(DEFAULT_PATCH.delayFeedback);

@@ -21,24 +21,25 @@
 <div class="oscillator-section">
   <fieldset class="oscillator-controls">
     <legend>Oscillator 2</legend>
-    <label for="oscillator2-sub-octave">Sub-Octave
+    <label for="oscillator2-sub-octave">
       <input
         type="checkbox"
         id="oscillator2-sub-octave"
         [checked]="oscillator2SubOctave()"
         (change)="toggleOscillator2SubOctave()"
-      />
+      >Sub-Octave
     </label>
 
-    <label for="oscillator2-invert">Invert
+    <label for="oscillator2-invert">
       <input
         type="checkbox"
         id="oscillator2-invert"
         [checked]="oscillator2Invert()"
         (change)="onOscillator2InvertChange()"
-      />
+      >Invert
     </label>
   </fieldset>
+  <ng-content></ng-content>
   <label>
     Glide:
     <input

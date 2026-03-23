@@ -1,5 +1,5 @@
 import { DelayController, DelayParameters } from '../utils/delay.js';
-import { DistortionController, DistortionParameters } from '../utils/distortion.js';
+import { OverdriveController, OverdriveParameters } from '../utils/overdrive.js';
 import { EnvelopeController, EnvelopeParameters } from '../utils/envelope.js';
 import { FilterController, FilterParameters, SupportedFilterType } from '../utils/filter.js';
 import { OscillatorController, OscillatorType } from '../utils/oscillator.js';
@@ -25,9 +25,9 @@ export interface SynthEngineConfig {
   filterEnvelopeDecay?: number;
   filterEnvelopeSustain?: number;
   filterEnvelopeRelease?: number;
-  distortionEnabled?: boolean;
-  distortionAmount?: number;
-  distortionFold?: boolean;
+  overdriveEnabled?: boolean;
+  overdriveAmount?: number;
+  overdriveFold?: boolean;
   delayEnabled?: boolean;
   delayTime?: number;
   delayFeedback?: number;
@@ -49,7 +49,7 @@ export interface SynthEngineParameters {
   oscillator2Invert?: boolean;
   glideTime?: number;
   filter?: FilterParameters;
-  distortion?: DistortionParameters;
+  overdrive?: OverdriveParameters;
   delay?: DelayParameters;
   envelope?: EnvelopeParameters;
 }
@@ -57,7 +57,7 @@ export interface SynthEngineParameters {
 export class SynthEngine {
   private mixerGain: GainNode;
   private filterController: FilterController;
-  private distortionController: DistortionController;
+  private overdriveController: OverdriveController;
   private delayController: DelayController;
   private oscillatorController1: OscillatorController;
   private oscillatorController2: OscillatorController;
@@ -113,17 +113,17 @@ export class SynthEngine {
       envelopeRelease: config.filterEnvelopeRelease ?? 0.5,
     });
 
-    this.distortionController = new DistortionController({
+    this.overdriveController = new OverdriveController({
       audioContext: this.audioContext,
       destination: this.filterController.getInput(),
-      type: config.distortionFold ? 'fold' : 'soft',
-      amount: config.distortionAmount ?? 0,
-      enabled: config.distortionEnabled ?? false
+      type: config.overdriveFold ? 'fold' : 'soft',
+      amount: config.overdriveAmount ?? 0,
+      enabled: config.overdriveEnabled ?? false
     });
 
     this.mixerGain = this.audioContext.createGain();
     this.mixerGain.gain.value = 1;
-    this.mixerGain.connect(this.distortionController.getInput());
+    this.mixerGain.connect(this.overdriveController.getInput());
 
     this.oscillatorController1 = new OscillatorController({
       audioContext: this.audioContext,
@@ -210,8 +210,8 @@ export class SynthEngine {
       this.filterController.setParameters(params.filter);
     }
 
-    if (params.distortion !== undefined) {
-      this.distortionController.setParameters(params.distortion);
+    if (params.overdrive !== undefined) {
+      this.overdriveController.setParameters(params.overdrive);
     }
 
     if (params.delay !== undefined) {
@@ -233,7 +233,7 @@ export class SynthEngine {
     this.oscillatorController2.disconnect();
     this.envelopeController.disconnect();
     this.filterController.disconnect();
-    this.distortionController.disconnect();
+    this.overdriveController.disconnect();
     this.delayController.disconnect();
     this.mixerGain.disconnect();
   }
