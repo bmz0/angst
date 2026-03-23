@@ -17,6 +17,11 @@ export class FilterPanel {
   protected filterQ = signal(this.synthEngineService.getPatch().filterQ);
   protected filterKeyboardTracking = signal(this.synthEngineService.getPatch().filterKeyboardTracking);
   protected filterPostGain = signal(this.synthEngineService.getPatch().filterPostGain);
+  protected filterEnvelopeEnabled = signal(this.synthEngineService.getPatch().filterEnvelopeEnabled);
+  protected filterEnvelopeAttack = signal(this.synthEngineService.getPatch().filterEnvelopeAttack);
+  protected filterEnvelopeDecay = signal(this.synthEngineService.getPatch().filterEnvelopeDecay);
+  protected filterEnvelopeSustain = signal(this.synthEngineService.getPatch().filterEnvelopeSustain);
+  protected filterEnvelopeRelease = signal(this.synthEngineService.getPatch().filterEnvelopeRelease);
 
   protected readonly filterTypes: SupportedFilterType[] = ['lowpass', 'highpass', 'bandpass'];
 
@@ -49,5 +54,30 @@ export class FilterPanel {
   protected onFilterPostGainChange(amount: number): void {
     this.filterPostGain.set(amount);
     this.synthEngineService.setParameters({ filter: { postGain: this.filterPostGain() } });
+  }
+
+  protected toggleFilterEnvelope(): void {
+    this.filterEnvelopeEnabled.update(enabled => !enabled);
+    this.synthEngineService.setParameters({ filter: { envelopeEnabled: this.filterEnvelopeEnabled() } });
+  }
+
+  protected onFilterEnvelopeAttackChange(attack: number): void {
+    this.filterEnvelopeAttack.set(attack);
+    this.synthEngineService.setParameters({ filter: { envelopeAttack: this.filterEnvelopeAttack() } });
+  }
+
+  protected onFilterEnvelopeDecayChange(decay: number): void {
+    this.filterEnvelopeDecay.set(decay);
+    this.synthEngineService.setParameters({ filter: { envelopeDecay: this.filterEnvelopeDecay() } });
+  }
+
+  protected onFilterEnvelopeSustainChange(sustain: number): void {
+    this.filterEnvelopeSustain.set(sustain);
+    this.synthEngineService.setParameters({ filter: { envelopeSustain: this.filterEnvelopeSustain() } });
+  }
+
+  protected onFilterEnvelopeReleaseChange(release: number): void {
+    this.filterEnvelopeRelease.set(release);
+    this.synthEngineService.setParameters({ filter: { envelopeRelease: this.filterEnvelopeRelease() } });
   }
 }

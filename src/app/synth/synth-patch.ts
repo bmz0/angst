@@ -20,6 +20,11 @@ export interface SynthPatch {
   filterQ: number;
   filterKeyboardTracking: number;
   filterPostGain: number;
+  filterEnvelopeEnabled: boolean;
+  filterEnvelopeAttack: number;
+  filterEnvelopeDecay: number;
+  filterEnvelopeSustain: number;
+  filterEnvelopeRelease: number;
 
   // Envelope (ADSR)
   envelopeAttack: number;
@@ -61,6 +66,11 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   filterQ: 16,
   filterKeyboardTracking: 0.38,
   filterPostGain: 1,
+  filterEnvelopeEnabled: false,
+  filterEnvelopeAttack: 0.005,
+  filterEnvelopeDecay: 0.1,
+  filterEnvelopeSustain: 1.0,
+  filterEnvelopeRelease: 0.5,
 
   envelopeAttack: 0.233,
   envelopeDecay: 0.316,
@@ -155,6 +165,11 @@ export function synthPatchFromJson(json: string): SynthPatch {
     filterQ: requireNumber('filterQ'),
     filterKeyboardTracking: requireNumber('filterKeyboardTracking'),
     filterPostGain: requireNumber('filterPostGain'),
+    filterEnvelopeEnabled: requireBoolean('filterEnvelopeEnabled'),
+    filterEnvelopeAttack: requireNumber('filterEnvelopeAttack'),
+    filterEnvelopeDecay: requireNumber('filterEnvelopeDecay'),
+    filterEnvelopeSustain: requireNumber('filterEnvelopeSustain'),
+    filterEnvelopeRelease: requireNumber('filterEnvelopeRelease'),
 
     envelopeAttack: requireNumber('envelopeAttack'),
     envelopeDecay: requireNumber('envelopeDecay'),
@@ -205,6 +220,11 @@ export function synthPatchToEngineConfig(
     filterQ: patch.filterQ,
     filterKeyboardTracking: patch.filterKeyboardTracking,
     filterPostGain: patch.filterPostGain,
+    filterEnvelopeEnabled: patch.filterEnvelopeEnabled,
+    filterEnvelopeAttack: patch.filterEnvelopeAttack,
+    filterEnvelopeDecay: patch.filterEnvelopeDecay,
+    filterEnvelopeSustain: patch.filterEnvelopeSustain,
+    filterEnvelopeRelease: patch.filterEnvelopeRelease,
 
     envelopeAttack: patch.envelopeAttack,
     envelopeDecay: patch.envelopeDecay,
@@ -245,6 +265,11 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
       Q: patch.filterQ,
       keyboardTracking: patch.filterKeyboardTracking,
       postGain: patch.filterPostGain,
+      envelopeEnabled: patch.filterEnvelopeEnabled,
+      envelopeAttack: patch.filterEnvelopeAttack,
+      envelopeDecay: patch.filterEnvelopeDecay,
+      envelopeSustain: patch.filterEnvelopeSustain,
+      envelopeRelease: patch.filterEnvelopeRelease,
     },
 
     envelope: {

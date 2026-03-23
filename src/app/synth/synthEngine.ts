@@ -20,6 +20,11 @@ export interface SynthEngineConfig {
   filterQ?: number;
   filterKeyboardTracking?: number;
   filterPostGain?: number;
+  filterEnvelopeEnabled?: boolean;
+  filterEnvelopeAttack?: number;
+  filterEnvelopeDecay?: number;
+  filterEnvelopeSustain?: number;
+  filterEnvelopeRelease?: number;
   distortionEnabled?: boolean;
   distortionAmount?: number;
   distortionFold?: boolean;
@@ -100,7 +105,12 @@ export class SynthEngine {
       Q: config.filterQ ?? 1,
       enabled: config.filterEnabled ?? false,
       keyboardTracking: config.filterKeyboardTracking ?? 0.5,
-      postGain: config.filterPostGain ?? 1
+      postGain: config.filterPostGain ?? 1,
+      envelopeEnabled: config.filterEnvelopeEnabled ?? false,
+      envelopeAttack: config.filterEnvelopeAttack ?? 0.005,
+      envelopeDecay: config.filterEnvelopeDecay ?? 0.1,
+      envelopeSustain: config.filterEnvelopeSustain ?? 0.7,
+      envelopeRelease: config.filterEnvelopeRelease ?? 0.5,
     });
 
     this.distortionController = new DistortionController({
@@ -139,11 +149,13 @@ export class SynthEngine {
     this.oscillatorController2.play({ frequency: osc2Frequency, glideTime: this.glideTime });
     
     this.filterController.trackNote(frequency);
+    this.filterController.triggerEnvelope();
     this.envelopeController.trigger();
   }
 
   stop(): void {
     const releaseTime = this.envelopeController.getParams().release;
+    this.filterController.releaseEnvelope();
     this.envelopeController.release();
 
     this.oscillatorController1.stop(releaseTime * 1000);
