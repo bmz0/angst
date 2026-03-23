@@ -218,6 +218,7 @@ export class FilterController {
 
     if (params.envelopeEnabled !== undefined) {
       this.filterEnvelopeEnabled = params.envelopeEnabled;
+      shouldUpdateBypass = true;
     }
     if (params.envelopeAttack !== undefined) {
       this.filterEnvelopeAttack = params.envelopeAttack;
