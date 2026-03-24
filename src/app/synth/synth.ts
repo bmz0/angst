@@ -75,7 +75,7 @@ export class Synth {
       this.arpeggiatorPanel().stop();
       this.visualizerRef().stop();
       this.activeVisualizerTimeout = null;
-    }, (1 + releaseTime) * 1000);
+    }, (5 + releaseTime) * 1000);
   }
 
   protected onOctaveChanged(octave: number): void {

@@ -10,6 +10,7 @@ canvas {
   height: 200px;
   width: 360px;
   margin-block-start: -0.5rem;
+  border: 1px solid var(--canvas-background);
   z-index: -1;
   display: block;
   grid-column: 1 / 3;

@@ -37,6 +37,8 @@ export class Visualizer {
     
     const canvas = this.canvasRef().nativeElement;
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const peaks = new Float32Array(canvas.width);
+    const peakTimestamps = new Float64Array(canvas.width);
     const canvasBackground = getComputedStyle(canvas).getPropertyValue('--canvas-background') || 'white';
     const canvasLine = getComputedStyle(canvas).getPropertyValue('--canvas-line') || 'black';
     
@@ -46,7 +48,7 @@ export class Visualizer {
       if (this.displayMode() === 'time') {
         drawWaveform(analyser, canvas, this.canvasContext!, dataArray, canvasBackground, canvasLine);
       } else {
-        drawSpectrum(analyser, canvas, this.canvasContext!, dataArray, canvasBackground, canvasLine);
+        drawSpectrum(analyser, canvas, this.canvasContext!, dataArray, peaks, peakTimestamps, performance.now(), canvasBackground, canvasLine);
       }
     };
     
