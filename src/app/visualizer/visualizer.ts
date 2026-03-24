@@ -1,10 +1,12 @@
-import { Component, viewChild, ElementRef, afterNextRender, DestroyRef, inject } from '@angular/core';
-import { drawWaveform } from './canvasDrawer.js';
+import { Component, viewChild, ElementRef, afterNextRender, DestroyRef, inject, signal } from '@angular/core';
+import { drawWaveform, drawSpectrum } from './canvasDrawer.js';
 import { SynthEngineService } from '../services/synth-engine.service.js';
+
+type DisplayMode = 'time' | 'frequency';
 
 @Component({
   selector: 'osc-visualizer',
-  template: '<canvas #canvas></canvas>',
+  templateUrl: './visualizer.html',
   styleUrls: ['./visualizer.css'],
   standalone: true
 })
@@ -16,11 +18,17 @@ export class Visualizer {
   private canvasContext?: CanvasRenderingContext2D;
   private animationId?: number;
 
+  protected readonly displayMode = signal<DisplayMode>('time');
+
   constructor() {
     afterNextRender(() => {
       this.canvasContext = this.canvasRef().nativeElement.getContext('2d')!;
     });
     this.destroyRef.onDestroy(() => this.stop());
+  }
+
+  protected toggleMode(): void {
+    this.displayMode.update(m => m === 'time' ? 'frequency' : 'time');
   }
 
   public start(): void {
@@ -33,9 +41,13 @@ export class Visualizer {
     const canvasLine = getComputedStyle(canvas).getPropertyValue('--canvas-line') || 'black';
     
     const draw = () => {
-      if (this.animationId) cancelAnimationFrame(this.animationId)
+      if (this.animationId) cancelAnimationFrame(this.animationId);
       this.animationId = requestAnimationFrame(draw);
-      drawWaveform(analyser, canvas, this.canvasContext!, dataArray, canvasBackground, canvasLine);
+      if (this.displayMode() === 'time') {
+        drawWaveform(analyser, canvas, this.canvasContext!, dataArray, canvasBackground, canvasLine);
+      } else {
+        drawSpectrum(analyser, canvas, this.canvasContext!, dataArray, canvasBackground, canvasLine);
+      }
     };
     
     draw();

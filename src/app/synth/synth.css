@@ -1,6 +1,4 @@
 canvas {
-  --canvas-background: black;
-  --canvas-line: cyan;
   border: 1px solid black;
   margin: 0 auto;
   width: 400px;

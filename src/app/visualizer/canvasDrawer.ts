@@ -38,3 +38,30 @@ export function drawWaveform(
   canvasContext.lineTo(width, height / 2);
   canvasContext.stroke();
 }
+
+export function drawSpectrum(
+  analyser: AnalyserNode,
+  canvas: HTMLCanvasElement,
+  canvasContext: CanvasRenderingContext2D,
+  dataArray: Uint8Array<ArrayBuffer>,
+  canvasBackground: string,
+  canvasLine: string
+): void {
+  const width = canvas.width;
+  const height = canvas.height;
+
+  analyser.getByteFrequencyData(dataArray);
+
+  canvasContext.fillStyle = canvasBackground;
+  canvasContext.fillRect(0, 0, width, height);
+
+  canvasContext.fillStyle = canvasLine;
+
+  const bufferLength = dataArray.length;
+  const barWidth = width / bufferLength;
+
+  for (let i = 0; i < bufferLength; i++) {
+    const barHeight = (dataArray[i] / 255) * height - 10;
+    canvasContext.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
+  }
+}
