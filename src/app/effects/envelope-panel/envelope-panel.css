@@ -1,22 +1,14 @@
-:host {
+fieldset {
   flex: 1;
   min-width: 300px;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid darkcyan;
   border-radius: 4px;
 }
 
-h3 {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #666;
-}
 
 label {
   display: flex;

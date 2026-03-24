@@ -1,32 +1,34 @@
-<h3>Arpeggiator</h3>
-<label>
-  <input
-    type="checkbox"
-    [checked]="arpeggiatorEnabled()"
-    (change)="toggleArpeggiator()">
-  Enable
-</label>
-
-@if (arpeggiatorEnabled()) {
+<fieldset>
+  <legend>Arpeggiator</legend>
   <label>
-    Pattern:
     <input
-      type="text"
-      pattern="\d+"
-      [value]="arpeggiatorPattern()"
-      (input)="onArpeggiatorPatternChange($any($event.target).value)">
-    <span>(semitones)</span>
+      type="checkbox"
+      [checked]="arpeggiatorEnabled()"
+      (change)="toggleArpeggiator()">
+    Enable
   </label>
 
-  <label>
-    Tempo:
-    <input
-      type="range"
-      min="20"
-      max="3000"
-      step="1"
-      [value]="arpeggiatorTempo()"
-      (input)="onArpeggiatorTempoChange(+$any($event.target).value)">
-    <span>{{ arpeggiatorTempo() }} BPM</span>
-  </label>
-}
+  @if (arpeggiatorEnabled()) {
+    <label>
+      Pattern:
+      <input
+        type="text"
+        pattern="\d+"
+        [value]="arpeggiatorPattern()"
+        (input)="onArpeggiatorPatternChange($any($event.target).value)">
+      <span>(semitones)</span>
+    </label>
+
+    <label>
+      Tempo:
+      <input
+        type="range"
+        min="20"
+        max="3000"
+        step="1"
+        [value]="arpeggiatorTempo()"
+        (input)="onArpeggiatorTempoChange(+$any($event.target).value)">
+      <span>{{ arpeggiatorTempo() }} BPM</span>
+    </label>
+  }
+</fieldset>
