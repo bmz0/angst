@@ -1,14 +1,13 @@
 export function drawWaveform(
   analyser: AnalyserNode,
   canvas: HTMLCanvasElement,
-  canvasContext: CanvasRenderingContext2D
+  canvasContext: CanvasRenderingContext2D,
+  dataArray: Uint8Array<ArrayBuffer>,
+  canvasBackground: string,
+  canvasLine: string
 ): void {
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
   const width = canvas.width;
   const height = canvas.height;
-  const canvasBackground = getComputedStyle(canvas).getPropertyValue('--canvas-background') || 'white';
-  const canvasLine = getComputedStyle(canvas).getPropertyValue('--canvas-line') || 'black';
 
   analyser.getByteTimeDomainData(dataArray);
   
@@ -19,6 +18,7 @@ export function drawWaveform(
   canvasContext.strokeStyle = canvasLine;
   canvasContext.beginPath();
   
+  const bufferLength = dataArray.length;
   const sliceWidth = width / bufferLength;
   let x = 0;
   

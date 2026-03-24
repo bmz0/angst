@@ -16,6 +16,7 @@ export class SynthEngineService {
 
   initialize(config: Omit<SynthEngineConfig, 'audioContext' | 'destination'>): void {
     const ctx = this.audioCtx.getContext()!;
+    this.analyser?.disconnect();
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 512;
     this.analyser.connect(ctx.destination);

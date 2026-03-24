@@ -28,11 +28,14 @@ export class Visualizer {
     if (!analyser || !this.canvasContext) return;
     
     const canvas = this.canvasRef().nativeElement;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const canvasBackground = getComputedStyle(canvas).getPropertyValue('--canvas-background') || 'white';
+    const canvasLine = getComputedStyle(canvas).getPropertyValue('--canvas-line') || 'black';
     
     const draw = () => {
       if (this.animationId) cancelAnimationFrame(this.animationId)
       this.animationId = requestAnimationFrame(draw);
-      drawWaveform(analyser, canvas, this.canvasContext!);
+      drawWaveform(analyser, canvas, this.canvasContext!, dataArray, canvasBackground, canvasLine);
     };
     
     draw();

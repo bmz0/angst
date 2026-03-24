@@ -34,6 +34,7 @@ export class Synth {
     this.init();
 
     this.destroyRef.onDestroy(() => {
+      if (this.activeVisualizerTimeout) clearTimeout(this.activeVisualizerTimeout);
       this.arpeggiatorPanel().stop();
       this.synthEngineService.disconnect();
     });

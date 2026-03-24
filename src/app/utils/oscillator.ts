@@ -36,8 +36,7 @@ export class OscillatorController {
     this.audioContext = config.audioContext;
     this.destination = config.destination;
     
-    this.gainNode = this.audioContext.createGain();   
-    this.createOscillatorNode();
+    this.gainNode = this.audioContext.createGain();
 
     this.setParameters(config);
 
@@ -129,7 +128,7 @@ export class OscillatorController {
 
     if (params.type !== undefined) {
       this.oscillatorType = params.type;
-      this.oscillatorNode!.type = params.type;
+      if (this.oscillatorNode) this.oscillatorNode.type = params.type;
     }
   }
 
@@ -158,6 +157,7 @@ export class OscillatorController {
   disconnect(): void {
     if (this.isPlaying()) {
       this.oscillatorNode?.stop();
+      this.oscillatorNode?.disconnect(this.gainNode);
     }
     try {
       this.gainNode.disconnect(this.destination);

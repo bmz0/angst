@@ -158,8 +158,8 @@ export class SynthEngine {
     this.filterController.releaseEnvelope();
     this.envelopeController.release();
 
-    this.oscillatorController1.stop(releaseTime * 1000);
-    this.oscillatorController2.stop(releaseTime * 1000);
+    this.oscillatorController1.stop(releaseTime);
+    this.oscillatorController2.stop(releaseTime);
   }
 
   isPlaying(): boolean {

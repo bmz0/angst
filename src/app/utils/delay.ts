@@ -187,6 +187,7 @@ export class DelayController {
   }
 
   disconnect(): void {
+    clearInterval(this.pingPongInterval);
     this.inputNode.disconnect();
     this.delayNode.disconnect();
     this.feedbackNode.disconnect();

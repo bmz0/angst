@@ -1,20 +1,7 @@
 :host {
-  border: 1px solid darkcyan;
-  border-radius: 4px;
-  margin-block-end: 0.5rem;
-  box-sizing: border-box;
-  border-image-source: linear-gradient(to top left, #8ff, darkcyan);
-  border-image-slice: 1;
-
-  &::before {
-    text-align: start;
-    position: absolute;
-    display: block;
-    margin: 0.25rem 0 0 0.5rem;
-    content: attr(data-label);
-    color: darkcyan;
-    background: var(--canvas-background);
-  }
+  display: block;
+  z-index: -1;
+  margin-block-start: -0.5rem;
 }
 
 canvas {

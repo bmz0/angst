@@ -25,6 +25,21 @@ input[type="range"] {
   justify-content: center;
 }
 
+.visualizer {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid darkcyan;
+  border-radius: 4px;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+
+  legend {
+    margin-inline-start: 1rem;
+  }
+}
+
 .effects-controls {
   display: grid;
   gap: 2rem;
