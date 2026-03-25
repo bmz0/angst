@@ -34,6 +34,7 @@ export interface SynthEngineConfig {
   delayMix?: number;
   delayPingPong?: boolean;
   delayPan?: number;
+  envelopeEnabled?: boolean;
   envelopeAttack?: number;
   envelopeDecay?: number;
   envelopeSustain?: number;
@@ -91,6 +92,7 @@ export class SynthEngine {
     this.envelopeController = new EnvelopeController({
       audioContext: this.audioContext,
       destination: this.delayController.getInput(),
+      enabled: config.envelopeEnabled ?? true,
       attack: config.envelopeAttack ?? 0.005,
       decay: config.envelopeDecay ?? 0.1,
       sustain: config.envelopeSustain ?? 0.7,

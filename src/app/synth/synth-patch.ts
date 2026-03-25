@@ -26,7 +26,8 @@ export interface SynthPatch {
   filterEnvelopeSustain: number;
   filterEnvelopeRelease: number;
 
-  // Envelope (ADSR)
+  // Amp Envelope
+  envelopeEnabled: boolean;
   envelopeAttack: number;
   envelopeDecay: number;
   envelopeSustain: number;
@@ -72,6 +73,7 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   filterEnvelopeSustain: 1.0,
   filterEnvelopeRelease: 0.5,
 
+  envelopeEnabled: true,
   envelopeAttack: 0.233,
   envelopeDecay: 0.316,
   envelopeSustain: 0.7,
@@ -171,6 +173,7 @@ export function synthPatchFromJson(json: string): SynthPatch {
     filterEnvelopeSustain: requireNumber('filterEnvelopeSustain'),
     filterEnvelopeRelease: requireNumber('filterEnvelopeRelease'),
 
+    envelopeEnabled: requireBoolean('envelopeEnabled'),
     envelopeAttack: requireNumber('envelopeAttack'),
     envelopeDecay: requireNumber('envelopeDecay'),
     envelopeSustain: requireNumber('envelopeSustain'),
@@ -226,6 +229,7 @@ export function synthPatchToEngineConfig(
     filterEnvelopeSustain: patch.filterEnvelopeSustain,
     filterEnvelopeRelease: patch.filterEnvelopeRelease,
 
+    envelopeEnabled: patch.envelopeEnabled,
     envelopeAttack: patch.envelopeAttack,
     envelopeDecay: patch.envelopeDecay,
     envelopeSustain: patch.envelopeSustain,
@@ -273,6 +277,7 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
     },
 
     envelope: {
+      enabled: patch.envelopeEnabled,
       attack: patch.envelopeAttack,
       decay: patch.envelopeDecay,
       sustain: patch.envelopeSustain,

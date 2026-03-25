@@ -27,3 +27,7 @@ span {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.hidden {
+  visibility: hidden;
+}

@@ -37,3 +37,22 @@ export function getFrequencyWithOffset(baseFrequency: number, semitones: number)
   // Each semitone is 2^(1/12) ratio
   return baseFrequency * Math.pow(2, semitones / 12);
 }
+
+/**
+ * Disconnects an AudioNode from an optional destination, silently ignoring
+ * InvalidAccessError (already disconnected). Any other error is rethrown.
+ */
+export function safeDisconnect(node: AudioNode, destination?: AudioNode): void {
+  try {
+    if (destination !== undefined) {
+      node.disconnect(destination);
+    } else {
+      node.disconnect();
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'InvalidAccessError') {
+      return;
+    }
+    throw error;
+  }
+}

@@ -1,6 +1,14 @@
 <fieldset>
   <legend>Amp Envelope</legend>
   <label>
+    <input
+      type="checkbox"
+      [checked]="envelopeEnabled()"
+      (change)="toggleEnvelope()">
+    Enable
+  </label>
+
+  <label [class.hidden]="!envelopeEnabled()">
     Attack:
     <input
       type="range"
@@ -12,7 +20,7 @@
     <span>{{ (envelopeAttack() * 1000).toFixed(0) }}ms</span>
   </label>
 
-  <label>
+  <label [class.hidden]="!envelopeEnabled()">
     Decay:
     <input
       type="range"
@@ -24,7 +32,7 @@
     <span>{{ (envelopeDecay() * 1000).toFixed(0) }}ms</span>
   </label>
 
-  <label>
+  <label [class.hidden]="!envelopeEnabled()">
     Sustain:
     <input
       type="range"
@@ -36,7 +44,7 @@
     <span>{{ (envelopeSustain() * 100).toFixed(0) }}%</span>
   </label>
 
-  <label>
+  <label [class.hidden]="!envelopeEnabled()">
     Release:
     <input
       type="range"

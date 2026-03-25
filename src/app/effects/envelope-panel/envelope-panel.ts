@@ -10,6 +10,7 @@ import { SynthEngineService } from '../../services/synth-engine.service.js';
 export class EnvelopePanel {
   private readonly synthEngineService = inject(SynthEngineService);
 
+  protected envelopeEnabled = signal(this.synthEngineService.getPatch().envelopeEnabled);
   protected envelopeAttack = signal(this.synthEngineService.getPatch().envelopeAttack);
   protected envelopeDecay = signal(this.synthEngineService.getPatch().envelopeDecay);
   protected envelopeSustain = signal(this.synthEngineService.getPatch().envelopeSustain);
@@ -17,6 +18,11 @@ export class EnvelopePanel {
 
   getRelease(): number {
     return this.envelopeRelease();
+  }
+
+  protected toggleEnvelope(): void {
+    this.envelopeEnabled.update(enabled => !enabled);
+    this.synthEngineService.setParameters({ envelope: { enabled: this.envelopeEnabled() } });
   }
 
   protected onEnvelopeAttackChange(attack: number): void {

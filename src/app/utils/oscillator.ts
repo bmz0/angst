@@ -1,3 +1,5 @@
+import { safeDisconnect } from './common.js';
+
 export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
 export type OscillatorConfig = {
@@ -64,7 +66,7 @@ export class OscillatorController {
         this.disposeOscillator();
         this.currentState = 'stopped';
       case 'init':
-      //@ts-expect-error - continue playing immediately
+      //@ts-expect-error - play was called, continue playing immediately
       case 'stopped':
         this.createOscillatorNode();
         this.currentState = 'playing';
@@ -91,7 +93,7 @@ export class OscillatorController {
   }
 
   protected stopCallback = (event: Event) => {
-    if (event.target as OscillatorNode === this.oscillatorNode) {
+    if ((event.target as OscillatorNode) === this.oscillatorNode) {
       this.disposeOscillator();
       this.currentState = 'stopped';
     }
@@ -155,18 +157,10 @@ export class OscillatorController {
   }
 
   disconnect(): void {
-    if (this.isPlaying()) {
-      this.oscillatorNode?.stop();
-      this.oscillatorNode?.disconnect(this.gainNode);
+    if (this.isPlaying() && this.oscillatorNode) {
+      this.oscillatorNode.stop();
+      safeDisconnect(this.oscillatorNode, this.gainNode);
     }
-    try {
-      this.gainNode.disconnect(this.destination);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'InvalidAccessError') {
-        // Ignore error if already disconnected
-      } else {
-        throw error;
-      }
-    }
+    safeDisconnect(this.gainNode, this.destination);
   }
 }
