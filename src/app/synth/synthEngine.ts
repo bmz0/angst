@@ -22,9 +22,9 @@ export interface SynthEngineConfig {
   filterPostGain?: number;
   filterEnvelopeEnabled?: boolean;
   filterEnvelopeAttack?: number;
-  filterEnvelopeDecay?: number;
   filterEnvelopeSustain?: number;
   filterEnvelopeRelease?: number;
+  filterEnvelopeBaseLevel?: number;
   overdriveEnabled?: boolean;
   overdriveAmount?: number;
   overdriveFold?: boolean;
@@ -110,9 +110,9 @@ export class SynthEngine {
       postGain: config.filterPostGain ?? 1,
       envelopeEnabled: config.filterEnvelopeEnabled ?? false,
       envelopeAttack: config.filterEnvelopeAttack ?? 0.005,
-      envelopeDecay: config.filterEnvelopeDecay ?? 0.1,
       envelopeSustain: config.filterEnvelopeSustain ?? 0.7,
       envelopeRelease: config.filterEnvelopeRelease ?? 0.5,
+      envelopeBaseLevel: config.filterEnvelopeBaseLevel ?? 0,
     });
 
     this.overdriveController = new OverdriveController({

@@ -57,7 +57,6 @@ describe('FilterController', () => {
         destination,
         envelopeEnabled: true,
         envelopeAttack: 0.1,
-        envelopeDecay: 0.2,
         envelopeSustain: 0.5,
         envelopeRelease: 0.3,
       });
@@ -65,9 +64,31 @@ describe('FilterController', () => {
       const params = controller.getFilterEnvelopeParams();
       expect(params.enabled).toBe(true);
       expect(params.attack).toBeCloseTo(0.1);
-      expect(params.decay).toBeCloseTo(0.2);
       expect(params.sustain).toBeCloseTo(0.5);
       expect(params.release).toBeCloseTo(0.3);
+    });
+
+    it('should default baseLevel to 0', () => {
+      controller = new FilterController({ audioContext, destination });
+
+      expect(controller.getFilterEnvelopeParams().baseLevel).toBe(0);
+    });
+
+    it('should apply provided baseLevel', () => {
+      controller = new FilterController({ audioContext, destination, envelopeBaseLevel: 0.4 });
+
+      expect(controller.getFilterEnvelopeParams().baseLevel).toBeCloseTo(0.4);
+    });
+
+    it('should clamp baseLevel to [0, 1] in constructor', () => {
+      const lo = new FilterController({ audioContext, destination, envelopeBaseLevel: -0.5 });
+      const hi = new FilterController({ audioContext, destination, envelopeBaseLevel: 1.5 });
+
+      expect(lo.getFilterEnvelopeParams().baseLevel).toBe(0);
+      expect(hi.getFilterEnvelopeParams().baseLevel).toBe(1);
+
+      lo.disconnect();
+      hi.disconnect();
     });
 
     it('should use sensible default ADSR values when envelope params are omitted', () => {
@@ -75,7 +96,6 @@ describe('FilterController', () => {
 
       const params = controller.getFilterEnvelopeParams();
       expect(params.attack).toBeGreaterThan(0);
-      expect(params.decay).toBeGreaterThan(0);
       expect(params.sustain).toBeGreaterThan(0);
       expect(params.sustain).toBeLessThanOrEqual(1);
       expect(params.release).toBeGreaterThan(0);
@@ -147,12 +167,6 @@ describe('FilterController', () => {
       expect(controller.getFilterEnvelopeParams().attack).toBeCloseTo(0.25);
     });
 
-    it('should update envelope decay', () => {
-      controller.setParameters({ envelopeDecay: 0.5 });
-
-      expect(controller.getFilterEnvelopeParams().decay).toBeCloseTo(0.5);
-    });
-
     it('should update envelope sustain', () => {
       controller.setParameters({ envelopeSustain: 0.4 });
 
@@ -169,7 +183,6 @@ describe('FilterController', () => {
       controller.setParameters({
         envelopeEnabled: true,
         envelopeAttack: 0.05,
-        envelopeDecay: 0.15,
         envelopeSustain: 0.6,
         envelopeRelease: 0.8,
       });
@@ -177,9 +190,22 @@ describe('FilterController', () => {
       const params = controller.getFilterEnvelopeParams();
       expect(params.enabled).toBe(true);
       expect(params.attack).toBeCloseTo(0.05);
-      expect(params.decay).toBeCloseTo(0.15);
       expect(params.sustain).toBeCloseTo(0.6);
       expect(params.release).toBeCloseTo(0.8);
+    });
+
+    it('should update envelope baseLevel', () => {
+      controller.setParameters({ envelopeBaseLevel: 0.6 });
+
+      expect(controller.getFilterEnvelopeParams().baseLevel).toBeCloseTo(0.6);
+    });
+
+    it('should clamp baseLevel to [0, 1] in setParameters', () => {
+      controller.setParameters({ envelopeBaseLevel: 2 });
+      expect(controller.getFilterEnvelopeParams().baseLevel).toBe(1);
+
+      controller.setParameters({ envelopeBaseLevel: -1 });
+      expect(controller.getFilterEnvelopeParams().baseLevel).toBe(0);
     });
   });
 
@@ -236,7 +262,6 @@ describe('FilterController', () => {
         enabled: true,
         envelopeEnabled: true,
         envelopeAttack: 0.5,
-        envelopeDecay: 0.1,
         envelopeSustain: 0.7,
         envelopeRelease: 0.2,
       });
@@ -256,7 +281,6 @@ describe('FilterController', () => {
         enabled: true,
         envelopeEnabled: true,
         envelopeAttack: 0.1,
-        envelopeDecay: 0.1,
         envelopeSustain: 0.7,
         envelopeRelease: 0.1,
       });
@@ -274,12 +298,29 @@ describe('FilterController', () => {
         enabled: true,
         envelopeEnabled: true,
         envelopeAttack: 0.01,
-        envelopeDecay: 0.01,
         envelopeSustain: 1.0,
         envelopeRelease: 0.1,
       });
 
       expect(() => controller.triggerEnvelope()).not.toThrow();
+    });
+
+    it('should set wet/dry to baseLevel / (1-baseLevel) when triggered', () => {
+      controller = new FilterController({
+        audioContext,
+        destination,
+        enabled: true,
+        envelopeEnabled: true,
+        envelopeBaseLevel: 0.3,
+        envelopeAttack: 0.5,
+        envelopeSustain: 0.7,
+        envelopeRelease: 0.2,
+      });
+
+      controller.triggerEnvelope();
+
+      expect(controller.getWetGainValue()).toBeCloseTo(0.3);
+      expect(controller.getDryGainValue()).toBeCloseTo(0.7);
     });
   });
 
@@ -343,13 +384,54 @@ describe('FilterController', () => {
         enabled: true,
         envelopeEnabled: true,
         envelopeAttack: 0.01,
-        envelopeDecay: 0.01,
         envelopeSustain: 0.7,
         envelopeRelease: 0.2,
       });
 
       controller.triggerEnvelope();
 
+      expect(() => controller.releaseEnvelope()).not.toThrow();
+    });
+
+    it('should schedule wet ramp to baseLevel on release (default baseLevel=0)', () => {
+      controller = new FilterController({
+        audioContext,
+        destination,
+        enabled: true,
+        envelopeEnabled: true,
+        envelopeAttack: 0.001,
+        envelopeSustain: 0.7,
+        envelopeRelease: 2.0,
+      });
+
+      // triggerEnvelope starts from baseLevel=0
+      controller.triggerEnvelope();
+      // After release, wet should ramp back toward baseLevel (0 by default)
+      expect(() => controller.releaseEnvelope()).not.toThrow();
+      // The ramp target is baseLevel — no assertion on intermediate scheduled
+      // value since AudioParam scheduling is async, but we can verify the
+      // tracked value was set during triggerEnvelope
+      expect(controller.getWetGainValue()).toBe(0);
+    });
+
+    it('should schedule wet ramp to custom baseLevel on release', () => {
+      controller = new FilterController({
+        audioContext,
+        destination,
+        enabled: true,
+        envelopeEnabled: true,
+        envelopeBaseLevel: 0.4,
+        envelopeAttack: 0.001,
+        envelopeSustain: 0.8,
+        envelopeRelease: 2.0,
+      });
+
+      controller.triggerEnvelope();
+
+      // triggerEnvelope sets wet to baseLevel (0.4)
+      expect(controller.getWetGainValue()).toBeCloseTo(0.4);
+
+      // releaseEnvelope should not throw and ramps back to baseLevel
       expect(() => controller.releaseEnvelope()).not.toThrow();
     });
   });
@@ -399,7 +481,6 @@ describe('FilterController', () => {
         enabled: true,
         envelopeEnabled: true,
         envelopeAttack: 0.5,
-        envelopeDecay: 0.1,
         envelopeSustain: 0.8,
         envelopeRelease: 0.2,
       });
@@ -475,7 +556,6 @@ describe('FilterController', () => {
         enabled: true,
         envelopeEnabled: true,
         envelopeAttack: 0.1,
-        envelopeDecay: 0.1,
         envelopeSustain: 0.7,
         envelopeRelease: 0.2,
       });

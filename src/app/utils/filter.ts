@@ -11,9 +11,9 @@ export interface FilterConfig {
   postGain?: number;
   envelopeEnabled?: boolean;
   envelopeAttack?: number;
-  envelopeDecay?: number;
   envelopeSustain?: number;
   envelopeRelease?: number;
+  envelopeBaseLevel?: number;
 }
 
 export interface FilterParameters {
@@ -25,9 +25,9 @@ export interface FilterParameters {
   postGain?: number;
   envelopeEnabled?: boolean;
   envelopeAttack?: number;
-  envelopeDecay?: number;
   envelopeSustain?: number;
   envelopeRelease?: number;
+  envelopeBaseLevel?: number;
 }
 
 export class FilterController {
@@ -46,9 +46,9 @@ export class FilterController {
   // Filter envelope state
   private filterEnvelopeEnabled: boolean;
   private filterEnvelopeAttack: number;
-  private filterEnvelopeDecay: number;
   private filterEnvelopeSustain: number;
   private filterEnvelopeRelease: number;
+  private filterEnvelopeBaseLevel: number;
 
   // Tracked gain values for testable reads (AudioParam.value is intrinsic, not scheduled)
   private _dryGainValue: number = 1;
@@ -75,9 +75,9 @@ export class FilterController {
     // Filter envelope defaults
     this.filterEnvelopeEnabled = config.envelopeEnabled ?? false;
     this.filterEnvelopeAttack = config.envelopeAttack ?? 0.005;
-    this.filterEnvelopeDecay = config.envelopeDecay ?? 0.1;
     this.filterEnvelopeSustain = config.envelopeSustain ?? 0.7;
     this.filterEnvelopeRelease = config.envelopeRelease ?? 0.5;
+    this.filterEnvelopeBaseLevel = Math.max(0, Math.min(1, config.envelopeBaseLevel ?? 0));
 
     // Create input node
     this.inputNode = this.audioContext.createGain();
@@ -133,16 +133,16 @@ export class FilterController {
   getFilterEnvelopeParams(): {
     enabled: boolean;
     attack: number;
-    decay: number;
     sustain: number;
     release: number;
+    baseLevel: number;
   } {
     return {
       enabled: this.filterEnvelopeEnabled,
       attack: this.filterEnvelopeAttack,
-      decay: this.filterEnvelopeDecay,
       sustain: this.filterEnvelopeSustain,
       release: this.filterEnvelopeRelease,
+      baseLevel: this.filterEnvelopeBaseLevel,
     };
   }
 
@@ -150,38 +150,41 @@ export class FilterController {
     if (!this.enabled || !this.filterEnvelopeEnabled) return;
 
     const now = this.audioContext.currentTime;
-    const { filterEnvelopeAttack: attack, filterEnvelopeDecay: decay, filterEnvelopeSustain: sustain } = this;
+    const {
+      filterEnvelopeAttack: attack,
+      filterEnvelopeSustain: sustain,
+      filterEnvelopeBaseLevel: baseLevel,
+    } = this;
 
-    // wet: 0 → 1 (attack) → sustain (decay)
+    // wet: baseLevel → sustain (over attack time)
     this.wetGainNode.gain.cancelScheduledValues(now);
-    this._wetGainValue = 0;
-    this.wetGainNode.gain.setValueAtTime(0, now);
-    this.wetGainNode.gain.linearRampToValueAtTime(1, now + attack);
-    this.wetGainNode.gain.linearRampToValueAtTime(sustain, now + attack + decay);
+    this._wetGainValue = baseLevel;
+    this.wetGainNode.gain.setValueAtTime(baseLevel, now);
+    this.wetGainNode.gain.linearRampToValueAtTime(sustain, now + attack);
 
-    // dry: 1 → 0 (attack) → (1 - sustain) (decay)
+    // dry: mirrors wet
     this.dryGainNode.gain.cancelScheduledValues(now);
-    this._dryGainValue = 1;
-    this.dryGainNode.gain.setValueAtTime(1, now);
-    this.dryGainNode.gain.linearRampToValueAtTime(0, now + attack);
-    this.dryGainNode.gain.linearRampToValueAtTime(1 - sustain, now + attack + decay);
+    this._dryGainValue = 1 - baseLevel;
+    this.dryGainNode.gain.setValueAtTime(1 - baseLevel, now);
+    this.dryGainNode.gain.linearRampToValueAtTime(1 - sustain, now + attack);
   }
 
   releaseEnvelope(): void {
     if (!this.enabled || !this.filterEnvelopeEnabled) return;
 
     const now = this.audioContext.currentTime;
-    const release = this.filterEnvelopeRelease;
+    const { filterEnvelopeRelease: release, filterEnvelopeBaseLevel: baseLevel } = this;
     const currentWet = this.wetGainNode.gain.value;
     const currentDry = this.dryGainNode.gain.value;
 
+    // wet: current → baseLevel; dry: current → (1 - baseLevel)
     this.wetGainNode.gain.cancelScheduledValues(now);
     this.wetGainNode.gain.setValueAtTime(currentWet, now);
-    this.wetGainNode.gain.linearRampToValueAtTime(0, now + release);
+    this.wetGainNode.gain.linearRampToValueAtTime(baseLevel, now + release);
 
     this.dryGainNode.gain.cancelScheduledValues(now);
     this.dryGainNode.gain.setValueAtTime(currentDry, now);
-    this.dryGainNode.gain.linearRampToValueAtTime(1, now + release);
+    this.dryGainNode.gain.linearRampToValueAtTime(1 - baseLevel, now + release);
   }
 
   setParameters(params: FilterParameters): void {
@@ -223,14 +226,14 @@ export class FilterController {
     if (params.envelopeAttack !== undefined) {
       this.filterEnvelopeAttack = params.envelopeAttack;
     }
-    if (params.envelopeDecay !== undefined) {
-      this.filterEnvelopeDecay = params.envelopeDecay;
-    }
     if (params.envelopeSustain !== undefined) {
       this.filterEnvelopeSustain = params.envelopeSustain;
     }
     if (params.envelopeRelease !== undefined) {
       this.filterEnvelopeRelease = params.envelopeRelease;
+    }
+    if (params.envelopeBaseLevel !== undefined) {
+      this.filterEnvelopeBaseLevel = Math.max(0, Math.min(1, params.envelopeBaseLevel));
     }
 
     if (shouldUpdateBypass) {

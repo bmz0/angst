@@ -70,9 +70,9 @@ export class SynthEngineService {
     if (params.filter?.postGain !== undefined) p.filterPostGain = params.filter.postGain;
     if (params.filter?.envelopeEnabled !== undefined) p.filterEnvelopeEnabled = params.filter.envelopeEnabled;
     if (params.filter?.envelopeAttack !== undefined) p.filterEnvelopeAttack = params.filter.envelopeAttack;
-    if (params.filter?.envelopeDecay !== undefined) p.filterEnvelopeDecay = params.filter.envelopeDecay;
     if (params.filter?.envelopeSustain !== undefined) p.filterEnvelopeSustain = params.filter.envelopeSustain;
     if (params.filter?.envelopeRelease !== undefined) p.filterEnvelopeRelease = params.filter.envelopeRelease;
+    if (params.filter?.envelopeBaseLevel !== undefined) p.filterEnvelopeBaseLevel = params.filter.envelopeBaseLevel;
 
     if (params.envelope?.attack !== undefined) p.envelopeAttack = params.envelope.attack;
     if (params.envelope?.decay !== undefined) p.envelopeDecay = params.envelope.decay;

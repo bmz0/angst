@@ -22,9 +22,9 @@ export interface SynthPatch {
   filterPostGain: number;
   filterEnvelopeEnabled: boolean;
   filterEnvelopeAttack: number;
-  filterEnvelopeDecay: number;
   filterEnvelopeSustain: number;
   filterEnvelopeRelease: number;
+  filterEnvelopeBaseLevel: number;
 
   // Amp Envelope
   envelopeEnabled: boolean;
@@ -69,9 +69,9 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   filterPostGain: 1,
   filterEnvelopeEnabled: false,
   filterEnvelopeAttack: 0.005,
-  filterEnvelopeDecay: 0.1,
   filterEnvelopeSustain: 1.0,
   filterEnvelopeRelease: 0.5,
+  filterEnvelopeBaseLevel: 0,
 
   envelopeEnabled: true,
   envelopeAttack: 0.233,
@@ -169,9 +169,9 @@ export function synthPatchFromJson(json: string): SynthPatch {
     filterPostGain: requireNumber('filterPostGain'),
     filterEnvelopeEnabled: requireBoolean('filterEnvelopeEnabled'),
     filterEnvelopeAttack: requireNumber('filterEnvelopeAttack'),
-    filterEnvelopeDecay: requireNumber('filterEnvelopeDecay'),
     filterEnvelopeSustain: requireNumber('filterEnvelopeSustain'),
     filterEnvelopeRelease: requireNumber('filterEnvelopeRelease'),
+    filterEnvelopeBaseLevel: requireNumber('filterEnvelopeBaseLevel'),
 
     envelopeEnabled: requireBoolean('envelopeEnabled'),
     envelopeAttack: requireNumber('envelopeAttack'),
@@ -225,9 +225,9 @@ export function synthPatchToEngineConfig(
     filterPostGain: patch.filterPostGain,
     filterEnvelopeEnabled: patch.filterEnvelopeEnabled,
     filterEnvelopeAttack: patch.filterEnvelopeAttack,
-    filterEnvelopeDecay: patch.filterEnvelopeDecay,
     filterEnvelopeSustain: patch.filterEnvelopeSustain,
     filterEnvelopeRelease: patch.filterEnvelopeRelease,
+    filterEnvelopeBaseLevel: patch.filterEnvelopeBaseLevel,
 
     envelopeEnabled: patch.envelopeEnabled,
     envelopeAttack: patch.envelopeAttack,
@@ -271,9 +271,9 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
       postGain: patch.filterPostGain,
       envelopeEnabled: patch.filterEnvelopeEnabled,
       envelopeAttack: patch.filterEnvelopeAttack,
-      envelopeDecay: patch.filterEnvelopeDecay,
       envelopeSustain: patch.filterEnvelopeSustain,
       envelopeRelease: patch.filterEnvelopeRelease,
+      envelopeBaseLevel: patch.filterEnvelopeBaseLevel,
     },
 
     envelope: {

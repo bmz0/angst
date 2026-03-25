@@ -19,9 +19,9 @@ export class FilterPanel {
   protected filterPostGain = signal(this.synthEngineService.getPatch().filterPostGain);
   protected filterEnvelopeEnabled = signal(this.synthEngineService.getPatch().filterEnvelopeEnabled);
   protected filterEnvelopeAttack = signal(this.synthEngineService.getPatch().filterEnvelopeAttack);
-  protected filterEnvelopeDecay = signal(this.synthEngineService.getPatch().filterEnvelopeDecay);
   protected filterEnvelopeSustain = signal(this.synthEngineService.getPatch().filterEnvelopeSustain);
   protected filterEnvelopeRelease = signal(this.synthEngineService.getPatch().filterEnvelopeRelease);
+  protected filterEnvelopeBaseLevel = signal(this.synthEngineService.getPatch().filterEnvelopeBaseLevel);
 
   protected readonly filterTypes: SupportedFilterType[] = ['lowpass', 'highpass', 'bandpass'];
 
@@ -66,11 +66,6 @@ export class FilterPanel {
     this.synthEngineService.setParameters({ filter: { envelopeAttack: this.filterEnvelopeAttack() } });
   }
 
-  protected onFilterEnvelopeDecayChange(decay: number): void {
-    this.filterEnvelopeDecay.set(decay);
-    this.synthEngineService.setParameters({ filter: { envelopeDecay: this.filterEnvelopeDecay() } });
-  }
-
   protected onFilterEnvelopeSustainChange(sustain: number): void {
     this.filterEnvelopeSustain.set(sustain);
     this.synthEngineService.setParameters({ filter: { envelopeSustain: this.filterEnvelopeSustain() } });
@@ -79,5 +74,10 @@ export class FilterPanel {
   protected onFilterEnvelopeReleaseChange(release: number): void {
     this.filterEnvelopeRelease.set(release);
     this.synthEngineService.setParameters({ filter: { envelopeRelease: this.filterEnvelopeRelease() } });
+  }
+
+  protected onFilterEnvelopeBaseLevelChange(baseLevel: number): void {
+    this.filterEnvelopeBaseLevel.set(baseLevel);
+    this.synthEngineService.setParameters({ filter: { envelopeBaseLevel: this.filterEnvelopeBaseLevel() } });
   }
 }
