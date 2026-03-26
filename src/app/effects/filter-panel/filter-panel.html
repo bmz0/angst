@@ -76,12 +76,12 @@
         type="checkbox"
         [checked]="filterEnvelopeEnabled()"
         (change)="toggleFilterEnvelope()">
-      Filter Mix Envelope
+      Mix Envelope
     </label>
 
     @if (filterEnvelopeEnabled()) {
       <label>
-        Base Level:
+        Filter Level:
         <input
           type="range"
           min="0"
@@ -105,7 +105,7 @@
       </label>
 
       <label>
-        Sustain:
+        Sustain Level:
         <input
           type="range"
           min="0"

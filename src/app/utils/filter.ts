@@ -234,6 +234,7 @@ export class FilterController {
     }
     if (params.envelopeBaseLevel !== undefined) {
       this.filterEnvelopeBaseLevel = Math.max(0, Math.min(1, params.envelopeBaseLevel));
+      shouldUpdateBypass = true;
     }
 
     if (shouldUpdateBypass) {
@@ -267,10 +268,18 @@ export class FilterController {
     this.dryGainNode.gain.cancelScheduledValues(now);
     this.wetGainNode.gain.cancelScheduledValues(now);
     if (this.enabled) {
-      this._dryGainValue = 0;
-      this._wetGainValue = 1;
-      this.dryGainNode.gain.value = 0;
-      this.wetGainNode.gain.value = 1;
+      if (this.filterEnvelopeEnabled) {
+        // Resting state is baseLevel so the slider is consistent with what you hear
+        this._dryGainValue = 1 - this.filterEnvelopeBaseLevel;
+        this._wetGainValue = this.filterEnvelopeBaseLevel;
+        this.dryGainNode.gain.value = 1 - this.filterEnvelopeBaseLevel;
+        this.wetGainNode.gain.value = this.filterEnvelopeBaseLevel;
+      } else {
+        this._dryGainValue = 0;
+        this._wetGainValue = 1;
+        this.dryGainNode.gain.value = 0;
+        this.wetGainNode.gain.value = 1;
+      }
     } else {
       this._dryGainValue = 1;
       this._wetGainValue = 0;

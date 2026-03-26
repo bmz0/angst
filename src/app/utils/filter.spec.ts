@@ -441,6 +441,35 @@ describe('FilterController', () => {
   // ---------------------------------------------------------------------------
 
   describe('bypass toggle interaction with envelope', () => {
+    it('should rest at baseLevel / (1-baseLevel) when filter and envelope are enabled', () => {
+      controller = new FilterController({
+        audioContext,
+        destination,
+        enabled: true,
+        envelopeEnabled: true,
+        envelopeBaseLevel: 0.4,
+      });
+
+      // No note triggered — resting state should match baseLevel
+      expect(controller.getWetGainValue()).toBeCloseTo(0.4);
+      expect(controller.getDryGainValue()).toBeCloseTo(0.6);
+    });
+
+    it('should update resting state immediately when baseLevel changes via setParameters', () => {
+      controller = new FilterController({
+        audioContext,
+        destination,
+        enabled: true,
+        envelopeEnabled: true,
+        envelopeBaseLevel: 0.2,
+      });
+
+      controller.setParameters({ envelopeBaseLevel: 0.7 });
+
+      expect(controller.getWetGainValue()).toBeCloseTo(0.7);
+      expect(controller.getDryGainValue()).toBeCloseTo(0.3);
+    });
+
     it('should reset to dry=1 wet=0 when disabling filter mid-envelope', () => {
       controller = new FilterController({
         audioContext,
@@ -457,7 +486,7 @@ describe('FilterController', () => {
       expect(controller.getWetGainValue()).toBe(0);
     });
 
-    it('should reset to dry=0 wet=1 when re-enabling filter (no-envelope binary state)', () => {
+    it('should reset to baseLevel resting state when re-enabling filter with envelope', () => {
       controller = new FilterController({
         audioContext,
         destination,
@@ -468,10 +497,10 @@ describe('FilterController', () => {
 
       controller.triggerEnvelope();
       controller.setParameters({ enabled: false }); // disable cancels
-      controller.setParameters({ enabled: true }); // re-enable: back to binary wet=1
+      controller.setParameters({ enabled: true }); // re-enable: rests at baseLevel (0)
 
-      expect(controller.getDryGainValue()).toBe(0);
-      expect(controller.getWetGainValue()).toBe(1);
+      expect(controller.getDryGainValue()).toBe(1);
+      expect(controller.getWetGainValue()).toBe(0);
     });
 
     it('should allow a fresh triggerEnvelope after disabling and re-enabling', () => {
