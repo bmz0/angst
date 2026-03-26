@@ -6,6 +6,7 @@ import { OverdrivePanel } from '../effects/overdrive-panel/overdrive-panel.js';
 import { FilterPanel } from '../effects/filter-panel/filter-panel.js';
 import { EnvelopePanel } from '../effects/envelope-panel/envelope-panel.js';
 import { DelayPanel } from '../effects/delay-panel/delay-panel.js';
+import { ReverbPanel } from '../effects/reverb-panel/reverb-panel.js';
 import { ArpeggiatorPanel } from '../effects/arpeggiator-panel/arpeggiator-panel.js';
 import { SynthEngineService } from '../services/synth-engine.service.js';
 import { getFrequency } from '../utils/common.js';
@@ -13,7 +14,7 @@ import { DEFAULT_PATCH, synthPatchToEngineConfig } from './synth-patch.js';
 
 @Component({
   selector: 'app-synth',
-  imports: [Keyboard, Visualizer, OscillatorPanel, OverdrivePanel, FilterPanel, EnvelopePanel, DelayPanel, ArpeggiatorPanel],
+  imports: [Keyboard, Visualizer, OscillatorPanel, OverdrivePanel, FilterPanel, EnvelopePanel, DelayPanel, ReverbPanel, ArpeggiatorPanel],
   templateUrl: './synth.html',
   styleUrl: './synth.css',
   standalone: true

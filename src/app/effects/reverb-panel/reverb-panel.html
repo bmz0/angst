@@ -1,0 +1,72 @@
+<fieldset>
+  <legend>Reverb</legend>
+  <label>
+    <input
+      type="checkbox"
+      [checked]="reverbEnabled()"
+      (change)="toggleReverb()">
+    Enable
+  </label>
+
+  @if (reverbEnabled()) {
+    <label>
+      Room Size:
+      <input
+        type="range"
+        min="0.1"
+        max="5"
+        step="0.1"
+        [value]="reverbRoomSize()"
+        (change)="onRoomSizeChange(+$any($event.target).value)">
+      <span>{{ reverbRoomSize().toFixed(1) }}s</span>
+    </label>
+
+    <label>
+      Decay:
+      <input
+        type="range"
+        min="0.1"
+        max="10"
+        step="0.1"
+        [value]="reverbDecay()"
+        (change)="onDecayChange(+$any($event.target).value)">
+      <span>{{ reverbDecay().toFixed(1) }}</span>
+    </label>
+
+    <label>
+      Mix:
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        [value]="reverbMix()"
+        (input)="onMixChange(+$any($event.target).value)">
+      <span>{{ (reverbMix() * 100).toFixed(0) }}%</span>
+    </label>
+
+    <label>
+      Color:
+      <input
+        type="range"
+        min="-1"
+        max="1"
+        step="0.05"
+        [value]="reverbColor()"
+        (change)="onColorChange(+$any($event.target).value)">
+      <span>{{ getColorLabel() }}</span>
+    </label>
+
+    <label>
+      Pre-delay:
+      <input
+        type="range"
+        min="0"
+        max="0.02"
+        step="0.001"
+        [value]="reverbPreDelay()"
+        (change)="onPreDelayChange(+$any($event.target).value)">
+      <span>{{ (reverbPreDelay() * 1000).toFixed(0) }}ms</span>
+    </label>
+  }
+</fieldset>

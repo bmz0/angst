@@ -1,4 +1,5 @@
 import { DelayController, DelayParameters } from '../utils/delay.js';
+import { ReverbController, ReverbParameters } from '../utils/reverb.js';
 import { OverdriveController, OverdriveParameters } from '../utils/overdrive.js';
 import { EnvelopeController, EnvelopeParameters } from '../utils/envelope.js';
 import { FilterController, FilterParameters, SupportedFilterType } from '../utils/filter.js';
@@ -34,6 +35,12 @@ export interface SynthEngineConfig {
   delayMix?: number;
   delayPingPong?: boolean;
   delayPan?: number;
+  reverbEnabled?: boolean;
+  reverbRoomSize?: number;
+  reverbDecay?: number;
+  reverbMix?: number;
+  reverbColor?: number;
+  reverbPreDelay?: number;
   envelopeEnabled?: boolean;
   envelopeAttack?: number;
   envelopeDecay?: number;
@@ -52,6 +59,7 @@ export interface SynthEngineParameters {
   filter?: FilterParameters;
   overdrive?: OverdriveParameters;
   delay?: DelayParameters;
+  reverb?: ReverbParameters;
   envelope?: EnvelopeParameters;
 }
 
@@ -60,6 +68,7 @@ export class SynthEngine {
   private filterController: FilterController;
   private overdriveController: OverdriveController;
   private delayController: DelayController;
+  private reverbController: ReverbController;
   private oscillatorController1: OscillatorController;
   private oscillatorController2: OscillatorController;
   private envelopeController: EnvelopeController;
@@ -78,9 +87,20 @@ export class SynthEngine {
     this.oscillator2Amount = config.oscillator2Amount ?? 1;
     this.glideTime = config.glideTime ?? 0;
 
-    this.delayController = new DelayController({
+    this.reverbController = new ReverbController({
       audioContext: this.audioContext,
       destination: config.destination,
+      roomSize: config.reverbRoomSize ?? 1.5,
+      decay: config.reverbDecay ?? 2,
+      mix: config.reverbMix ?? 0.3,
+      enabled: config.reverbEnabled ?? false,
+      color: config.reverbColor ?? 0,
+      preDelay: config.reverbPreDelay ?? 0.01,
+    });
+
+    this.delayController = new DelayController({
+      audioContext: this.audioContext,
+      destination: this.reverbController.getInput(),
       delayTime: config.delayTime ?? 0.3,
       feedback: config.delayFeedback ?? 0.3,
       mix: config.delayMix ?? 0.3,
@@ -220,6 +240,10 @@ export class SynthEngine {
       this.delayController.setParameters(params.delay);
     }
 
+    if (params.reverb !== undefined) {
+      this.reverbController.setParameters(params.reverb);
+    }
+
     if (params.envelope !== undefined) {
       this.envelopeController.setParameters(params.envelope);
     }
@@ -237,6 +261,7 @@ export class SynthEngine {
     this.filterController.disconnect();
     this.overdriveController.disconnect();
     this.delayController.disconnect();
+    this.reverbController.disconnect();
     this.mixerGain.disconnect();
   }
 }

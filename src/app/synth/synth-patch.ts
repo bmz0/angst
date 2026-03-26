@@ -46,6 +46,14 @@ export interface SynthPatch {
   delayPingPong: boolean;
   delayPan: number;
 
+  // Reverb
+  reverbEnabled: boolean;
+  reverbRoomSize: number;
+  reverbDecay: number;
+  reverbMix: number;
+  reverbColor: number;
+  reverbPreDelay: number;
+
   // Arpeggiator
   arpeggiatorEnabled: boolean;
   arpeggiatorTempo: number;
@@ -89,6 +97,13 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   delayMix: 0.3,
   delayPingPong: true,
   delayPan: 0.3,
+
+  reverbEnabled: false,
+  reverbRoomSize: 1.5,
+  reverbDecay: 2,
+  reverbMix: 0.3,
+  reverbColor: 0,
+  reverbPreDelay: 0.01,
 
   arpeggiatorEnabled: false,
   arpeggiatorTempo: 300,
@@ -190,6 +205,13 @@ export function synthPatchFromJson(json: string): SynthPatch {
     delayPingPong: requireBoolean('delayPingPong'),
     delayPan: requireNumber('delayPan'),
 
+    reverbEnabled: requireBoolean('reverbEnabled'),
+    reverbRoomSize: requireNumber('reverbRoomSize'),
+    reverbDecay: requireNumber('reverbDecay'),
+    reverbMix: requireNumber('reverbMix'),
+    reverbColor: requireNumber('reverbColor'),
+    reverbPreDelay: requireNumber('reverbPreDelay'),
+
     arpeggiatorEnabled: requireBoolean('arpeggiatorEnabled'),
     arpeggiatorTempo: requireNumber('arpeggiatorTempo'),
     arpeggiatorPattern: requireString('arpeggiatorPattern'),
@@ -245,6 +267,13 @@ export function synthPatchToEngineConfig(
     delayMix: patch.delayMix,
     delayPingPong: patch.delayPingPong,
     delayPan: patch.delayPan,
+
+    reverbEnabled: patch.reverbEnabled,
+    reverbRoomSize: patch.reverbRoomSize,
+    reverbDecay: patch.reverbDecay,
+    reverbMix: patch.reverbMix,
+    reverbColor: patch.reverbColor,
+    reverbPreDelay: patch.reverbPreDelay,
   };
 }
 
@@ -297,6 +326,15 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
       mix: patch.delayMix,
       pingPong: patch.delayPingPong,
       delayPan: patch.delayPan,
+    },
+
+    reverb: {
+      enabled: patch.reverbEnabled,
+      roomSize: patch.reverbRoomSize,
+      decay: patch.reverbDecay,
+      mix: patch.reverbMix,
+      color: patch.reverbColor,
+      preDelay: patch.reverbPreDelay,
     },
   };
 }

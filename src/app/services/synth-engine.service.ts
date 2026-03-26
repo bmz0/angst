@@ -90,6 +90,13 @@ export class SynthEngineService {
     if (params.delay?.pingPong !== undefined) p.delayPingPong = params.delay.pingPong;
     if (params.delay?.delayPan !== undefined) p.delayPan = params.delay.delayPan;
 
+    if (params.reverb?.enabled !== undefined) p.reverbEnabled = params.reverb.enabled;
+    if (params.reverb?.roomSize !== undefined) p.reverbRoomSize = params.reverb.roomSize;
+    if (params.reverb?.decay !== undefined) p.reverbDecay = params.reverb.decay;
+    if (params.reverb?.mix !== undefined) p.reverbMix = params.reverb.mix;
+    if (params.reverb?.color !== undefined) p.reverbColor = params.reverb.color;
+    if (params.reverb?.preDelay !== undefined) p.reverbPreDelay = params.reverb.preDelay;
+
     this.currentPatch = { ...this.currentPatch, ...p };
   }
 
