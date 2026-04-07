@@ -96,6 +96,7 @@ export class SynthEngineService {
     if (params.reverb?.mix !== undefined) p.reverbMix = params.reverb.mix;
     if (params.reverb?.color !== undefined) p.reverbColor = params.reverb.color;
     if (params.reverb?.preDelay !== undefined) p.reverbPreDelay = params.reverb.preDelay;
+    if (params.reverb?.hpFrequency !== undefined) p.reverbHpFrequency = params.reverb.hpFrequency;
 
     this.currentPatch = { ...this.currentPatch, ...p };
   }

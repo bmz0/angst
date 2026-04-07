@@ -34,6 +34,7 @@ describe('ReverbController', () => {
         enabled: true,
         color: 0,
         preDelay: 0.01,
+        hpFrequency: 80,
       });
 
       expect(controller.getInput()).toBeInstanceOf(GainNode);
@@ -49,6 +50,7 @@ describe('ReverbController', () => {
         enabled: true,
         color: 0,
         preDelay: 0.01,
+        hpFrequency: 80,
       });
 
       expect(controller.getInput().gain.value).toBe(1);
@@ -64,6 +66,7 @@ describe('ReverbController', () => {
         enabled: true,
         color: 0,
         preDelay: 0.01,
+        hpFrequency: 80,
       })).not.toThrow();
     });
 
@@ -77,6 +80,7 @@ describe('ReverbController', () => {
         enabled: true,
         color: -1,
         preDelay: 0.01,
+        hpFrequency: 80,
       })).not.toThrow();
     });
 
@@ -90,6 +94,7 @@ describe('ReverbController', () => {
         enabled: true,
         color: 1,
         preDelay: 0.01,
+        hpFrequency: 80,
       })).not.toThrow();
     });
 
@@ -103,6 +108,7 @@ describe('ReverbController', () => {
         enabled: false,
         color: 0,
         preDelay: 0.01,
+        hpFrequency: 80,
       })).not.toThrow();
     });
   });
@@ -122,6 +128,7 @@ describe('ReverbController', () => {
         enabled: false,
         color: 0,
         preDelay: 0.01,
+        hpFrequency: 80,
       });
     });
 
@@ -196,6 +203,18 @@ describe('ReverbController', () => {
     it('should handle neutral color (0) without throwing', () => {
       expect(() => controller.setParameters({ color: 0 })).not.toThrow();
     });
+
+    it('should update hpFrequency without throwing', () => {
+      expect(() => controller.setParameters({ hpFrequency: 200 })).not.toThrow();
+    });
+
+    it('should handle minimum hpFrequency (20 Hz) without throwing', () => {
+      expect(() => controller.setParameters({ hpFrequency: 20 })).not.toThrow();
+    });
+
+    it('should handle maximum hpFrequency (500 Hz) without throwing', () => {
+      expect(() => controller.setParameters({ hpFrequency: 500 })).not.toThrow();
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -213,6 +232,7 @@ describe('ReverbController', () => {
         enabled: true,
         color: 0,
         preDelay: 0.01,
+        hpFrequency: 80,
       });
 
       expect(() => controller.disconnect()).not.toThrow();

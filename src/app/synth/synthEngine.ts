@@ -41,6 +41,7 @@ export interface SynthEngineConfig {
   reverbMix?: number;
   reverbColor?: number;
   reverbPreDelay?: number;
+  reverbHpFrequency?: number;
   envelopeEnabled?: boolean;
   envelopeAttack?: number;
   envelopeDecay?: number;
@@ -96,6 +97,7 @@ export class SynthEngine {
       enabled: config.reverbEnabled ?? false,
       color: config.reverbColor ?? 0,
       preDelay: config.reverbPreDelay ?? 0.01,
+      hpFrequency: config.reverbHpFrequency ?? 80,
     });
 
     this.delayController = new DelayController({

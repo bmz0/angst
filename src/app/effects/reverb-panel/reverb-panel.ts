@@ -16,6 +16,7 @@ export class ReverbPanel {
   protected reverbMix = signal(this.synthEngineService.getPatch().reverbMix);
   protected reverbColor = signal(this.synthEngineService.getPatch().reverbColor);
   protected reverbPreDelay = signal(this.synthEngineService.getPatch().reverbPreDelay);
+  protected reverbHpFrequency = signal(this.synthEngineService.getPatch().reverbHpFrequency);
 
   protected toggleReverb(): void {
     this.reverbEnabled.update(enabled => !enabled);
@@ -47,6 +48,11 @@ export class ReverbPanel {
   protected onPreDelayChange(preDelay: number): void {
     this.reverbPreDelay.set(preDelay);
     this.synthEngineService.setParameters({ reverb: { preDelay: this.reverbPreDelay() } });
+  }
+
+  protected onHpFrequencyChange(frequency: number): void {
+    this.reverbHpFrequency.set(frequency);
+    this.synthEngineService.setParameters({ reverb: { hpFrequency: this.reverbHpFrequency() } });
   }
 
   protected getColorLabel(): string {

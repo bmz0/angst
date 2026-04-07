@@ -53,6 +53,7 @@ export interface SynthPatch {
   reverbMix: number;
   reverbColor: number;
   reverbPreDelay: number;
+  reverbHpFrequency: number;
 
   // Arpeggiator
   arpeggiatorEnabled: boolean;
@@ -99,11 +100,12 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   delayPan: 0.3,
 
   reverbEnabled: false,
-  reverbRoomSize: 1.5,
-  reverbDecay: 2,
-  reverbMix: 0.3,
-  reverbColor: 0,
-  reverbPreDelay: 0.01,
+  reverbRoomSize: 4.0,
+  reverbDecay: 14.5,
+  reverbMix: 0.13,
+  reverbColor: 0.6,
+  reverbPreDelay: 0.024,
+  reverbHpFrequency: 120,
 
   arpeggiatorEnabled: false,
   arpeggiatorTempo: 300,
@@ -211,6 +213,7 @@ export function synthPatchFromJson(json: string): SynthPatch {
     reverbMix: requireNumber('reverbMix'),
     reverbColor: requireNumber('reverbColor'),
     reverbPreDelay: requireNumber('reverbPreDelay'),
+    reverbHpFrequency: requireNumber('reverbHpFrequency'),
 
     arpeggiatorEnabled: requireBoolean('arpeggiatorEnabled'),
     arpeggiatorTempo: requireNumber('arpeggiatorTempo'),
@@ -274,6 +277,7 @@ export function synthPatchToEngineConfig(
     reverbMix: patch.reverbMix,
     reverbColor: patch.reverbColor,
     reverbPreDelay: patch.reverbPreDelay,
+    reverbHpFrequency: patch.reverbHpFrequency,
   };
 }
 
@@ -335,6 +339,7 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
       mix: patch.reverbMix,
       color: patch.reverbColor,
       preDelay: patch.reverbPreDelay,
+      hpFrequency: patch.reverbHpFrequency,
     },
   };
 }
