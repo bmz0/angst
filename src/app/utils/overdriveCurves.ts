@@ -17,7 +17,7 @@ export function makeSoftClipCurve(amount: number, samples: number = 48000) {
   }
 
   // Normalize to prevent level loss
-  const normalizationFactor = 1.0 / maxValue;
+  const normalizationFactor = maxValue !== 0 ? 1.0 / maxValue : 1.0;
   for (let i = 0; i < samples; i++) {
     curve[i] *= normalizationFactor;
   }
@@ -61,7 +61,7 @@ export function makeFoldCurve(threshold: number = 0.5, samples: number = 48000) 
   }
   
   // Normalize to prevent level loss
-  const normalizationFactor = maxValue > 0 ? 1.0 / maxValue : 1.0;
+  const normalizationFactor = maxValue !== 0 ? 1.0 / maxValue : 1.0;
   for (let i = 0; i < samples; i++) {
     curve[i] *= normalizationFactor;
   }

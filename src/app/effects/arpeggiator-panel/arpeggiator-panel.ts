@@ -1,6 +1,7 @@
 import { Component, DestroyRef, inject, output, signal } from '@angular/core';
 import { ArpeggiatorController } from '../../utils/arpeggiator.js';
 import { DEFAULT_PATCH } from '../../synth/synth-patch.js';
+import { SynthEngineService } from '../../services/synth-engine.service.js';
 
 @Component({
   selector: 'arpeggiator-panel',
@@ -11,9 +12,11 @@ import { DEFAULT_PATCH } from '../../synth/synth-patch.js';
 export class ArpeggiatorPanel {
   stoppedWhilePlaying = output<void>();
 
-  protected arpeggiatorEnabled = signal(DEFAULT_PATCH.arpeggiatorEnabled);
-  protected arpeggiatorTempo = signal(DEFAULT_PATCH.arpeggiatorTempo);
-  protected arpeggiatorPattern = signal(DEFAULT_PATCH.arpeggiatorPattern);
+  private readonly synthEngineService = inject(SynthEngineService);
+
+  protected arpeggiatorEnabled = signal(this.synthEngineService.getPatch().arpeggiatorEnabled);
+  protected arpeggiatorTempo = signal(this.synthEngineService.getPatch().arpeggiatorTempo);
+  protected arpeggiatorPattern = signal(this.synthEngineService.getPatch().arpeggiatorPattern);
 
   private readonly arpeggiatorController = new ArpeggiatorController({
     tempo: DEFAULT_PATCH.arpeggiatorTempo,
@@ -40,6 +43,11 @@ export class ArpeggiatorPanel {
 
   protected toggleArpeggiator(): void {
     this.arpeggiatorEnabled.update(enabled => !enabled);
+    this.synthEngineService.updateArpeggiatorPatch({
+      arpeggiatorEnabled: this.arpeggiatorEnabled(),
+      arpeggiatorTempo: this.arpeggiatorTempo(),
+      arpeggiatorPattern: this.arpeggiatorPattern(),
+    });
 
     if (!this.arpeggiatorEnabled() && this.arpeggiatorController.isRunning()) {
       this.arpeggiatorController.stop();
@@ -50,10 +58,20 @@ export class ArpeggiatorPanel {
   protected onArpeggiatorTempoChange(tempo: number): void {
     this.arpeggiatorTempo.set(tempo);
     this.arpeggiatorController.setTempo(tempo);
+    this.synthEngineService.updateArpeggiatorPatch({
+      arpeggiatorEnabled: this.arpeggiatorEnabled(),
+      arpeggiatorTempo: tempo,
+      arpeggiatorPattern: this.arpeggiatorPattern(),
+    });
   }
 
   protected onArpeggiatorPatternChange(pattern: string): void {
     this.arpeggiatorPattern.set(pattern);
     this.arpeggiatorController.setPattern(pattern);
+    this.synthEngineService.updateArpeggiatorPatch({
+      arpeggiatorEnabled: this.arpeggiatorEnabled(),
+      arpeggiatorTempo: this.arpeggiatorTempo(),
+      arpeggiatorPattern: pattern,
+    });
   }
 }

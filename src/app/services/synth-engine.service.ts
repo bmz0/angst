@@ -4,6 +4,7 @@ import { SynthEngine, SynthEngineConfig, SynthEngineParameters } from '../synth/
 import {
   DEFAULT_PATCH,
   SynthPatch,
+  mergePatchWithParams,
   synthPatchToEngineParameters,
 } from '../synth/synth-patch.js';
 
@@ -48,61 +49,17 @@ export class SynthEngineService {
 
   setParameters(params: SynthEngineParameters): void {
     this.engine?.setParameters(params);
-    this.syncPatchFromParameters(params);
+    this.currentPatch = mergePatchWithParams(this.currentPatch, params);
   }
 
-  private syncPatchFromParameters(params: SynthEngineParameters): void {
-    const p: Partial<SynthPatch> = {};
-
-    if (params.oscillator1Type !== undefined) p.oscillator1Type = params.oscillator1Type;
-    if (params.oscillator2Type !== undefined) p.oscillator2Type = params.oscillator2Type;
-    if (params.oscillator1Amount !== undefined) p.oscillator1Amount = params.oscillator1Amount;
-    if (params.oscillator2Amount !== undefined) p.oscillator2Amount = params.oscillator2Amount;
-    if (params.oscillator2SubOctave !== undefined) p.oscillator2SubOctave = params.oscillator2SubOctave;
-    if (params.oscillator2Invert !== undefined) p.oscillator2Invert = params.oscillator2Invert;
-    if (params.glideTime !== undefined) p.glideTime = params.glideTime;
-
-    if (params.filter?.enabled !== undefined) p.filterEnabled = params.filter.enabled;
-    if (params.filter?.type !== undefined) p.filterType = params.filter.type;
-    if (params.filter?.frequency !== undefined) p.filterFrequency = params.filter.frequency;
-    if (params.filter?.Q !== undefined) p.filterQ = params.filter.Q;
-    if (params.filter?.keyboardTracking !== undefined) p.filterKeyboardTracking = params.filter.keyboardTracking;
-    if (params.filter?.postGain !== undefined) p.filterPostGain = params.filter.postGain;
-    if (params.filter?.envelopeEnabled !== undefined) p.filterEnvelopeEnabled = params.filter.envelopeEnabled;
-    if (params.filter?.envelopeAttack !== undefined) p.filterEnvelopeAttack = params.filter.envelopeAttack;
-    if (params.filter?.envelopeSustain !== undefined) p.filterEnvelopeSustain = params.filter.envelopeSustain;
-    if (params.filter?.envelopeRelease !== undefined) p.filterEnvelopeRelease = params.filter.envelopeRelease;
-    if (params.filter?.envelopeBaseLevel !== undefined) p.filterEnvelopeBaseLevel = params.filter.envelopeBaseLevel;
-
-    if (params.envelope?.attack !== undefined) p.envelopeAttack = params.envelope.attack;
-    if (params.envelope?.decay !== undefined) p.envelopeDecay = params.envelope.decay;
-    if (params.envelope?.sustain !== undefined) p.envelopeSustain = params.envelope.sustain;
-    if (params.envelope?.release !== undefined) p.envelopeRelease = params.envelope.release;
-
-    if (params.overdrive?.enabled !== undefined) p.overdriveEnabled = params.overdrive.enabled;
-    if (params.overdrive?.type !== undefined) p.overdriveType = params.overdrive.type;
-    if (params.overdrive?.amount !== undefined) p.overdriveAmount = params.overdrive.amount;
-
-    if (params.rectifier?.enabled !== undefined) p.rectifierEnabled = params.rectifier.enabled;
-    if (params.rectifier?.mode !== undefined) p.rectifierMode = params.rectifier.mode;
-    if (params.rectifier?.bias !== undefined) p.rectifierBias = params.rectifier.bias;
-
-    if (params.delay?.enabled !== undefined) p.delayEnabled = params.delay.enabled;
-    if (params.delay?.delayTime !== undefined) p.delayTime = params.delay.delayTime;
-    if (params.delay?.feedback !== undefined) p.delayFeedback = params.delay.feedback;
-    if (params.delay?.mix !== undefined) p.delayMix = params.delay.mix;
-    if (params.delay?.pingPong !== undefined) p.delayPingPong = params.delay.pingPong;
-    if (params.delay?.delayPan !== undefined) p.delayPan = params.delay.delayPan;
-
-    if (params.reverb?.enabled !== undefined) p.reverbEnabled = params.reverb.enabled;
-    if (params.reverb?.roomSize !== undefined) p.reverbRoomSize = params.reverb.roomSize;
-    if (params.reverb?.decay !== undefined) p.reverbDecay = params.reverb.decay;
-    if (params.reverb?.mix !== undefined) p.reverbMix = params.reverb.mix;
-    if (params.reverb?.color !== undefined) p.reverbColor = params.reverb.color;
-    if (params.reverb?.preDelay !== undefined) p.reverbPreDelay = params.reverb.preDelay;
-    if (params.reverb?.hpFrequency !== undefined) p.reverbHpFrequency = params.reverb.hpFrequency;
-
-    this.currentPatch = { ...this.currentPatch, ...p };
+  /**
+   * Updates arpeggiator-only patch fields without touching engine parameters.
+   * Called by ArpeggiatorPanel so its state is persisted back into the patch.
+   */
+  updateArpeggiatorPatch(
+    partial: Pick<SynthPatch, 'arpeggiatorEnabled' | 'arpeggiatorTempo' | 'arpeggiatorPattern'>,
+  ): void {
+    this.currentPatch = { ...this.currentPatch, ...partial };
   }
 
   play(frequency: number): void {

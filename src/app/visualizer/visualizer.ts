@@ -1,4 +1,4 @@
-import { Component, viewChild, ElementRef, afterNextRender, DestroyRef, inject, signal } from '@angular/core';
+import { Component, viewChild, ElementRef, afterNextRender, DestroyRef, inject, signal, input } from '@angular/core';
 import { drawWaveform, drawSpectrum } from './canvasDrawer.js';
 import { SynthEngineService } from '../services/synth-engine.service.js';
 
@@ -12,6 +12,9 @@ type DisplayMode = 'time' | 'frequency';
 })
 export class Visualizer {
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+
+  /** Optional override — pass an AnalyserNode directly instead of using SynthEngineService. */
+  readonly analyserOverride = input<AnalyserNode | undefined>(undefined);
 
   private readonly synthEngineService = inject(SynthEngineService);
   private readonly destroyRef = inject(DestroyRef);
@@ -32,7 +35,7 @@ export class Visualizer {
   }
 
   public start(): void {
-    const analyser = this.synthEngineService.getAnalyser();
+    const analyser = this.analyserOverride() ?? this.synthEngineService.getAnalyser();
     if (!analyser || !this.canvasContext) return;
     
     const canvas = this.canvasRef().nativeElement;
