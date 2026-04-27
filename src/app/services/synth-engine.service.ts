@@ -83,6 +83,10 @@ export class SynthEngineService {
     if (params.overdrive?.type !== undefined) p.overdriveType = params.overdrive.type;
     if (params.overdrive?.amount !== undefined) p.overdriveAmount = params.overdrive.amount;
 
+    if (params.rectifier?.enabled !== undefined) p.rectifierEnabled = params.rectifier.enabled;
+    if (params.rectifier?.mode !== undefined) p.rectifierMode = params.rectifier.mode;
+    if (params.rectifier?.bias !== undefined) p.rectifierBias = params.rectifier.bias;
+
     if (params.delay?.enabled !== undefined) p.delayEnabled = params.delay.enabled;
     if (params.delay?.delayTime !== undefined) p.delayTime = params.delay.delayTime;
     if (params.delay?.feedback !== undefined) p.delayFeedback = params.delay.feedback;

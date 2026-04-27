@@ -1,6 +1,7 @@
 import { DelayController, DelayParameters } from '../utils/delay.js';
 import { ReverbController, ReverbParameters } from '../utils/reverb.js';
 import { OverdriveController, OverdriveParameters } from '../utils/overdrive.js';
+import { RectifierController, RectifierMode, RectifierParameters } from '../utils/rectifier.js';
 import { EnvelopeController, EnvelopeParameters } from '../utils/envelope.js';
 import { FilterController, FilterParameters, SupportedFilterType } from '../utils/filter.js';
 import { OscillatorController, OscillatorType } from '../utils/oscillator.js';
@@ -29,6 +30,9 @@ export interface SynthEngineConfig {
   overdriveEnabled?: boolean;
   overdriveAmount?: number;
   overdriveFold?: boolean;
+  rectifierEnabled?: boolean;
+  rectifierMode?: RectifierMode;
+  rectifierBias?: number;
   delayEnabled?: boolean;
   delayTime?: number;
   delayFeedback?: number;
@@ -59,6 +63,7 @@ export interface SynthEngineParameters {
   glideTime?: number;
   filter?: FilterParameters;
   overdrive?: OverdriveParameters;
+  rectifier?: RectifierParameters;
   delay?: DelayParameters;
   reverb?: ReverbParameters;
   envelope?: EnvelopeParameters;
@@ -68,6 +73,7 @@ export class SynthEngine {
   private mixerGain: GainNode;
   private filterController: FilterController;
   private overdriveController: OverdriveController;
+  private rectifierController: RectifierController;
   private delayController: DelayController;
   private reverbController: ReverbController;
   private oscillatorController1: OscillatorController;
@@ -145,9 +151,17 @@ export class SynthEngine {
       enabled: config.overdriveEnabled ?? false
     });
 
+    this.rectifierController = new RectifierController({
+      audioContext: this.audioContext,
+      destination: this.overdriveController.getInput(),
+      mode: config.rectifierMode ?? 'half',
+      bias: config.rectifierBias ?? 0,
+      enabled: config.rectifierEnabled ?? false
+    });
+
     this.mixerGain = this.audioContext.createGain();
     this.mixerGain.gain.value = 1;
-    this.mixerGain.connect(this.overdriveController.getInput());
+    this.mixerGain.connect(this.rectifierController.getInput());
 
     this.oscillatorController1 = new OscillatorController({
       audioContext: this.audioContext,
@@ -245,6 +259,10 @@ export class SynthEngine {
       this.overdriveController.setParameters(params.overdrive);
     }
 
+    if (params.rectifier !== undefined) {
+      this.rectifierController.setParameters(params.rectifier);
+    }
+
     if (params.delay !== undefined) {
       this.delayController.setParameters(params.delay);
     }
@@ -268,6 +286,7 @@ export class SynthEngine {
     this.oscillatorController2.disconnect();
     this.envelopeController.disconnect();
     this.filterController.disconnect();
+    this.rectifierController.disconnect();
     this.overdriveController.disconnect();
     this.delayController.disconnect();
     this.reverbController.disconnect();

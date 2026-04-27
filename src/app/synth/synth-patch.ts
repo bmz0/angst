@@ -1,6 +1,7 @@
 import type { OscillatorType } from '../utils/oscillator.js';
 import type { SupportedFilterType } from '../utils/filter.js';
 import type { OverdriveType } from '../utils/overdrive.js';
+import type { RectifierMode } from '../utils/rectifier.js';
 import type { SynthEngineConfig, SynthEngineParameters } from './synthEngine.js';
 
 export interface SynthPatch {
@@ -37,6 +38,11 @@ export interface SynthPatch {
   overdriveEnabled: boolean;
   overdriveType: OverdriveType;
   overdriveAmount: number;
+
+  // Rectifier
+  rectifierEnabled: boolean;
+  rectifierMode: RectifierMode;
+  rectifierBias: number;
 
   // Delay
   delayEnabled: boolean;
@@ -92,6 +98,10 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   overdriveType: 'fold',
   overdriveAmount: 75,
 
+  rectifierEnabled: false,
+  rectifierMode: 'half',
+  rectifierBias: 0,
+
   delayEnabled: true,
   delayTime: 0.3,
   delayFeedback: 0.3,
@@ -123,6 +133,7 @@ export function synthPatchToJson(patch: SynthPatch): string {
 const OSCILLATOR_TYPES = new Set<string>(['sine', 'square', 'sawtooth', 'triangle']);
 const FILTER_TYPES = new Set<string>(['lowpass', 'highpass', 'bandpass']);
 const DISTORTION_TYPES = new Set<string>(['soft', 'fold']);
+const RECTIFIER_MODES = new Set<string>(['half', 'full']);
 
 export function synthPatchFromJson(json: string): SynthPatch {
   let raw: unknown;
@@ -200,6 +211,10 @@ export function synthPatchFromJson(json: string): SynthPatch {
     overdriveType: requireEnum('overdriveType', DISTORTION_TYPES) as OverdriveType,
     overdriveAmount: requireNumber('overdriveAmount'),
 
+    rectifierEnabled: requireBoolean('rectifierEnabled'),
+    rectifierMode: requireEnum('rectifierMode', RECTIFIER_MODES) as RectifierMode,
+    rectifierBias: requireNumber('rectifierBias'),
+
     delayEnabled: requireBoolean('delayEnabled'),
     delayTime: requireNumber('delayTime'),
     delayFeedback: requireNumber('delayFeedback'),
@@ -264,6 +279,10 @@ export function synthPatchToEngineConfig(
     overdriveFold: patch.overdriveType === 'fold',
     overdriveAmount: patch.overdriveAmount,
 
+    rectifierEnabled: patch.rectifierEnabled,
+    rectifierMode: patch.rectifierMode,
+    rectifierBias: patch.rectifierBias,
+
     delayEnabled: patch.delayEnabled,
     delayTime: patch.delayTime,
     delayFeedback: patch.delayFeedback,
@@ -321,6 +340,12 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
       enabled: patch.overdriveEnabled,
       type: patch.overdriveType,
       amount: patch.overdriveAmount,
+    },
+
+    rectifier: {
+      enabled: patch.rectifierEnabled,
+      mode: patch.rectifierMode,
+      bias: patch.rectifierBias,
     },
 
     delay: {

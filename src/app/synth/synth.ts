@@ -3,6 +3,7 @@ import { Keyboard } from '../keyboard/keyboard.js';
 import { Visualizer } from '../visualizer/visualizer.js';
 import { OscillatorPanel } from '../effects/oscillator-panel/oscillator-panel.js';
 import { OverdrivePanel } from '../effects/overdrive-panel/overdrive-panel.js';
+import { RectifierPanel } from '../effects/rectifier-panel/rectifier-panel.js';
 import { FilterPanel } from '../effects/filter-panel/filter-panel.js';
 import { EnvelopePanel } from '../effects/envelope-panel/envelope-panel.js';
 import { DelayPanel } from '../effects/delay-panel/delay-panel.js';
@@ -14,7 +15,7 @@ import { DEFAULT_PATCH, synthPatchToEngineConfig } from './synth-patch.js';
 
 @Component({
   selector: 'app-synth',
-  imports: [Keyboard, Visualizer, OscillatorPanel, OverdrivePanel, FilterPanel, EnvelopePanel, DelayPanel, ReverbPanel, ArpeggiatorPanel],
+  imports: [Keyboard, Visualizer, OscillatorPanel, OverdrivePanel, RectifierPanel, FilterPanel, EnvelopePanel, DelayPanel, ReverbPanel, ArpeggiatorPanel],
   templateUrl: './synth.html',
   styleUrl: './synth.css',
   standalone: true

@@ -1,0 +1,31 @@
+<fieldset>
+  <legend>Rectifier</legend>
+  <div class="options">
+    <label>
+      <input
+        type="checkbox"
+        [checked]="rectifierEnabled()"
+        (change)="toggleRectifier()">
+      Enable
+    </label>
+
+    <label [class.hidden]="!rectifierEnabled()">
+      <input
+        type="checkbox"
+        [checked]="rectifierFull()"
+        (change)="toggleRectifierMode()">
+      Full-wave
+    </label>
+  </div>
+
+  <label [class.hidden]="!rectifierEnabled()">
+    Bias:
+    <input
+      type="range"
+      min="-100"
+      max="100"
+      [value]="rectifierBias()"
+      (input)="onBiasChange(+$any($event.target).value)">
+    <span class="amount">{{ rectifierBias() }}</span>
+  </label>
+</fieldset>

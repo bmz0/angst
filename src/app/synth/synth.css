@@ -26,6 +26,7 @@ input[type="range"] {
 .visualizer {
   display: flex;
   justify-content: center;
+  align-self: center;
   gap: 0.5rem;
   border: 1px solid darkcyan;
   border-radius: 4px;
