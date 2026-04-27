@@ -11,6 +11,8 @@ export interface PlaybackOptions {
   frequency: number;
   glideTime?: number;
   when?: number;
+  /** Absolute AudioContext time at which to start playback (offline-scheduler use). */
+  at?: number;
 }
 
 export interface OscillatorParameters {
@@ -55,33 +57,52 @@ export class OscillatorController {
 
   play(options: PlaybackOptions): void {
     const now = this.audioContext.currentTime;
-    const { frequency, glideTime = this.glideTime, when } = options;
-    const playTime = when ? when + now : now;
+    const { frequency, glideTime = this.glideTime, when, at } = options;
+    const playTime = at ?? (when ? when + now : now);
 
+    const prevFrequency = this.currentFrequency;
     this.currentFrequency = frequency;
 
     switch (this.currentState) {
       //@ts-expect-error - early dispose oscillator if still stopping
       case 'stopping':
-        this.disposeOscillator();
+        if (at !== undefined) {
+          // Offline mode: the old oscillator has a scheduled stop in the
+          // audio timeline already; leave it connected and just orphan the
+          // reference so stopCallback doesn't confuse the new node.
+          this.oscillatorNode = null;
+        } else {
+          this.disposeOscillator();
+        }
         this.currentState = 'stopped';
       case 'init':
-      //@ts-expect-error - play was called, continue playing immediately
       case 'stopped':
+        // createOscillatorNode already sets frequency.value to the target — no ramp needed.
         this.createOscillatorNode();
         this.currentState = 'playing';
         this.oscillatorNode!.start(playTime);
-     case 'playing':
-        this.oscillatorNode!.frequency.linearRampToValueAtTime(frequency, playTime + glideTime);
+        break;
+      case 'playing':
+        // Cancel any previously-scheduled frequency automation at or after playTime to
+        // prevent accidental pitch glide between notes when glideTime is 0. Without this,
+        // linearRampToValueAtTime would interpolate from the previous note's pitch over the
+        // entire step duration even with glideTime = 0.
+        this.oscillatorNode!.frequency.cancelScheduledValues(playTime);
+        if (glideTime > 0) {
+          this.oscillatorNode!.frequency.setValueAtTime(prevFrequency, playTime);
+          this.oscillatorNode!.frequency.linearRampToValueAtTime(frequency, playTime + glideTime);
+        } else {
+          this.oscillatorNode!.frequency.setValueAtTime(frequency, playTime);
+        }
         break;
     }
   }
   
-  stop(when?: number) {
+  stop(releaseTime?: number, at?: number) {
     if (!this.isPlaying()) return;
       
     const now = this.audioContext.currentTime;
-    const stopTime = when ? now + when : now;
+    const stopTime = at !== undefined ? at + (releaseTime ?? 0) : now + (releaseTime ?? 0);
     const currentOscillator = this.oscillatorNode;
 
     this.currentState = 'stopping';
@@ -100,9 +121,39 @@ export class OscillatorController {
   }
 
   restart(options: Partial<PlaybackOptions>): void {
-    const { frequency } = options;
-    this.stop();
-    this.play({ frequency: frequency ?? this.currentFrequency });
+    const { frequency, at } = options;
+    this.stop(0, at);
+    this.play({ frequency: frequency ?? this.currentFrequency, at });
+  }
+
+  /**
+   * Schedules an exponential frequency sweep on the currently playing oscillator.
+   * Intended for percussive pitch drops (e.g. kick drum) where the pitch falls
+   * from `startHz` to `endHz` over `duration` seconds.
+   *
+   * Silently no-ops if the oscillator is not currently playing. Cancels any
+   * previously scheduled frequency automation at `t` before applying the ramp,
+   * so it is safe to call immediately after `play()` without glide interference.
+   *
+   * Both `startHz` and `endHz` are clamped to a minimum of 1 Hz — the Web Audio
+   * `exponentialRampToValueAtTime` API requires strictly positive values.
+   *
+   * @param startHz  Frequency at the start of the sweep.
+   * @param endHz    Frequency at the end of the sweep (the settled value).
+   * @param duration Length of the sweep in seconds.
+   * @param at       Absolute AudioContext time to begin the sweep (offline use).
+   *                 Defaults to `audioContext.currentTime`.
+   */
+  triggerPitchSweep(startHz: number, endHz: number, duration: number, at?: number): void {
+    if (!this.oscillatorNode) return;
+
+    const t = at ?? this.audioContext.currentTime;
+    const safeStart = Math.max(1, startHz);
+    const safeEnd = Math.max(1, endHz);
+
+    this.oscillatorNode.frequency.cancelScheduledValues(t);
+    this.oscillatorNode.frequency.setValueAtTime(safeStart, t);
+    this.oscillatorNode.frequency.exponentialRampToValueAtTime(safeEnd, t + duration);
   }
 
   disposeOscillator(): void {

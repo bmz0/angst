@@ -245,4 +245,92 @@ describe('EnvelopeController', () => {
       expect(() => controller.disconnect()).not.toThrow();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // trigger / release with at? (offline absolute-time scheduling)
+  // ---------------------------------------------------------------------------
+
+  describe('trigger and release with at (offline scheduling)', () => {
+    it('should not throw when trigger is called with an absolute time', () => {
+      controller = new EnvelopeController({ audioContext, destination, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.5 });
+
+      expect(() => controller.trigger(0.5)).not.toThrow();
+    });
+
+    it('should not throw when release is called with an absolute time', () => {
+      controller = new EnvelopeController({ audioContext, destination, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.5 });
+      controller.trigger(0);
+
+      expect(() => controller.release(1.0)).not.toThrow();
+    });
+
+    it('should render a non-silent buffer when triggered at t=0', async () => {
+      controller = new EnvelopeController({ audioContext, destination, attack: 0.01, decay: 0.1, sustain: 0.9, release: 0.5 });
+
+      // Connect a constant source through the envelope to make the rendered signal audible
+      const src = audioContext.createOscillator();
+      src.frequency.value = 440;
+      src.connect(controller.getInput());
+      src.start(0);
+
+      controller.trigger(0);
+
+      const buffer = await audioContext.startRendering();
+      const data = buffer.getChannelData(0);
+      const hasAudio = data.some(s => Math.abs(s) > 0);
+      expect(hasAudio).toBe(true);
+    });
+
+    it('should render silence after scheduled release tail completes', async () => {
+      const release = 0.1;
+      const noteOff = 0.5;
+      controller = new EnvelopeController({ audioContext, destination, attack: 0.01, decay: 0.05, sustain: 0.9, release });
+
+      const src = audioContext.createOscillator();
+      src.frequency.value = 440;
+      src.connect(controller.getInput());
+      src.start(0);
+      src.stop(2); // keep source alive past the buffer
+
+      controller.trigger(0);
+      controller.release(noteOff);
+
+      const buffer = await audioContext.startRendering();
+      const sr = buffer.sampleRate;
+      const data = buffer.getChannelData(0);
+
+      // Well after the release tail (noteOff + release + margin) should be silent
+      const silentStart = Math.ceil((noteOff + release + 0.1) * sr);
+      const tail = data.slice(silentStart);
+      const maxAbs = tail.reduce((m, s) => Math.max(m, Math.abs(s)), 0);
+      expect(maxAbs).toBeCloseTo(0, 3);
+    });
+
+    it('should track scheduledGain correctly across multiple at-scheduled notes', () => {
+      controller = new EnvelopeController({ audioContext, destination, attack: 0.01, decay: 0.05, sustain: 0.7, release: 0.1 });
+
+      // First note
+      controller.trigger(0);
+      controller.release(0.3);
+
+      // Second note — scheduledGain must start from 0 (post-release) not a stale value
+      controller.trigger(0.5);
+      controller.release(0.8);
+
+      // Third note
+      expect(() => controller.trigger(1.0)).not.toThrow();
+    });
+
+    it('should not throw when trigger with at is called for a disabled envelope', () => {
+      controller = new EnvelopeController({ audioContext, destination, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.5, enabled: false });
+
+      expect(() => controller.trigger(0.5)).not.toThrow();
+    });
+
+    it('should not throw when release with at is called for a disabled envelope', () => {
+      controller = new EnvelopeController({ audioContext, destination, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.5, enabled: false });
+
+      expect(() => controller.release(0.5)).not.toThrow();
+    });
+  });
 });

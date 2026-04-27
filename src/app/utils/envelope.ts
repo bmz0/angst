@@ -25,6 +25,11 @@ export class EnvelopeController {
   private sustain: number;
   private releaseTime: number;
 
+  // Tracks the gain level that will be in effect at the end of the last
+  // scheduled event. Used in offline mode where gainNode.gain.value
+  // never reflects scheduled automation.
+  private scheduledGain: number = 0;
+
   constructor(config: EnvelopeConfig) {
     this.audioContext = config.audioContext;
     this.enabled = config.enabled ?? true;
@@ -64,38 +69,71 @@ export class EnvelopeController {
     }
   }
 
-  trigger(): void {
-    const currentGain = this.gainNode.gain.value;
+  trigger(at?: number): void {
     const now = this.audioContext.currentTime;
+    const t = at ?? now;
     const { attack, decay, enabled, sustain } = this;
 
-    if (!enabled && currentGain === 1) return;
+    // In live mode only, skip no-op re-trigger of an already-full (non-enveloped) gain
+    if (at === undefined && !enabled && this.gainNode.gain.value === 1) return;
 
-    this.gainNode.gain.cancelScheduledValues(now);
-    this.gainNode.gain.value = !enabled ? 1 : currentGain;
+    // Starting value: in offline mode use the tracked scheduled level;
+    // in live mode read the actual current gain.
+    const startGain = at !== undefined ? this.scheduledGain
+                                       : this.gainNode.gain.value;
+
+    // Cancel future automation in both live and offline modes. In offline mode,
+    // stale release ramps from previous notes bleed into the new note's attack
+    // and cut it off early, making the recording sound faster than the tempo.
+    this.gainNode.gain.cancelScheduledValues(t);
+
+    const initValue = !enabled ? 1 : startGain;
+    if (at !== undefined) {
+      // Offline mode: must schedule so the audio timeline reflects the value.
+      this.gainNode.gain.setValueAtTime(initValue, t);
+    } else {
+      // Live mode: set .value directly so it is immediately readable by callers.
+      this.gainNode.gain.value = initValue;
+    }
 
     if (enabled) {
-      this.gainNode.gain.linearRampToValueAtTime(1, now + attack);
-      this.gainNode.gain.linearRampToValueAtTime(
-        sustain,
-        now + attack + decay
-      );
+      this.gainNode.gain.linearRampToValueAtTime(1, t + attack);
+      this.gainNode.gain.linearRampToValueAtTime(sustain, t + attack + decay);
+      this.scheduledGain = sustain;
+    } else {
+      this.scheduledGain = 1;
     }
   }
 
-  release(): void {
-    const currentGain = this.gainNode.gain.value;
+  release(at?: number): void {
     const now = this.audioContext.currentTime;
+    const t = at ?? now;
     const { enabled, releaseTime } = this;
 
-    if (!enabled && currentGain === 0) return;
+    // In live mode only, skip no-op release of an already-silent (non-enveloped) gain
+    if (at === undefined && !enabled && this.gainNode.gain.value === 0) return;
 
-    this.gainNode.gain.cancelScheduledValues(now);
-    this.gainNode.gain.value = !enabled ? 0 : currentGain;
+    // Starting value: in offline mode use the tracked scheduled level.
+    const startGain = at !== undefined ? this.scheduledGain
+                                       : this.gainNode.gain.value;
+
+    // Cancel future automation in both live and offline modes (e.g. a long attack
+    // scheduled beyond the note-off time must be removed before the release ramp).
+    this.gainNode.gain.cancelScheduledValues(t);
+
+    const initValue = !enabled ? 0 : startGain;
+    if (at !== undefined) {
+      // Offline mode: must schedule so the audio timeline reflects the value.
+      this.gainNode.gain.setValueAtTime(initValue, t);
+    } else {
+      // Live mode: set .value directly so it is immediately readable by callers.
+      this.gainNode.gain.value = initValue;
+    }
 
     if (enabled) {
-      this.gainNode.gain.linearRampToValueAtTime(0, now + releaseTime);
+      this.gainNode.gain.linearRampToValueAtTime(0, t + releaseTime);
     }
+    this.scheduledGain = 0;
   }
 
   getParams(): { attack: number; decay: number; sustain: number; release: number } {

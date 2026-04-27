@@ -6,7 +6,7 @@ import { FilterController, FilterParameters, SupportedFilterType } from '../util
 import { OscillatorController, OscillatorType } from '../utils/oscillator.js';
 
 export interface SynthEngineConfig {
-  audioContext: AudioContext;
+  audioContext: BaseAudioContext;
   destination: AudioNode;
   oscillator1Type?: OscillatorType;
   oscillator2Type?: OscillatorType;
@@ -73,7 +73,7 @@ export class SynthEngine {
   private oscillatorController1: OscillatorController;
   private oscillatorController2: OscillatorController;
   private envelopeController: EnvelopeController;
-  private readonly audioContext: AudioContext;
+  private readonly audioContext: BaseAudioContext;
   private oscillator2SubOctave: boolean;
   private oscillator2Invert: boolean;
   private oscillator1Amount: number;
@@ -167,23 +167,27 @@ export class SynthEngine {
     });
   }
 
-  play(frequency: number): void {
+  play(frequency: number, at?: number): void {
     const osc2Frequency = this.oscillator2SubOctave ? frequency / 2 : frequency;
-    this.oscillatorController1.play({ frequency, glideTime: this.glideTime });
-    this.oscillatorController2.play({ frequency: osc2Frequency, glideTime: this.glideTime });
+    this.oscillatorController1.play({ frequency, glideTime: this.glideTime, at });
+    this.oscillatorController2.play({ frequency: osc2Frequency, glideTime: this.glideTime, at });
     
-    this.filterController.trackNote(frequency);
-    this.filterController.triggerEnvelope();
-    this.envelopeController.trigger();
+    this.filterController.trackNote(frequency, at);
+    this.filterController.triggerEnvelope(at);
+    this.envelopeController.trigger(at);
   }
 
-  stop(): void {
+  stop(at?: number): void {
     const releaseTime = this.envelopeController.getParams().release;
-    this.filterController.releaseEnvelope();
-    this.envelopeController.release();
+    this.filterController.releaseEnvelope(at);
+    this.envelopeController.release(at);
 
-    this.oscillatorController1.stop(releaseTime);
-    this.oscillatorController2.stop(releaseTime);
+    // Oscillators must keep running through the full release tail so the
+    // envelope fade can render completely. Add a small epsilon (5 ms) to
+    // ensure the oscillator is not hard-cut while the gain is still > 0.
+    const EPSILON = 0.005;
+    this.oscillatorController1.stop(releaseTime + EPSILON, at);
+    this.oscillatorController2.stop(releaseTime + EPSILON, at);
   }
 
   isPlaying(): boolean {
@@ -221,8 +225,11 @@ export class SynthEngine {
       const osc2Frequency = this.oscillator2SubOctave ? currentFrequency / 2 : currentFrequency;
 
       if (this.isPlaying()) {
-        this.oscillatorController1.restart({ frequency: currentFrequency });
-        this.oscillatorController2.restart({ frequency: osc2Frequency });
+        // Use a shared future-dated timestamp so both oscillators stop and restart
+        // on the exact same audio-thread sample frame, preserving their phase relationship.
+        const at = this.audioContext.currentTime + 0.001;
+        this.oscillatorController1.restart({ frequency: currentFrequency, at });
+        this.oscillatorController2.restart({ frequency: osc2Frequency, at });
       }
     }
 

@@ -122,6 +122,15 @@ export class FilterController {
     return this.inputNode;
   }
 
+  /**
+   * Exposes the underlying BiquadFilterNode's frequency AudioParam, allowing
+   * external callers to schedule per-trigger frequency automation (e.g. a drum
+   * filter envelope sweep) without going through the full setParameters path.
+   */
+  getFrequencyParam(): AudioParam {
+    return this.filterNode.frequency;
+  }
+
   getDryGainValue(): number {
     return this._dryGainValue;
   }
@@ -146,45 +155,54 @@ export class FilterController {
     };
   }
 
-  triggerEnvelope(): void {
+  triggerEnvelope(at?: number): void {
     if (!this.enabled || !this.filterEnvelopeEnabled) return;
 
     const now = this.audioContext.currentTime;
+    const t = at ?? now;
     const {
       filterEnvelopeAttack: attack,
       filterEnvelopeSustain: sustain,
       filterEnvelopeBaseLevel: baseLevel,
     } = this;
 
+    // Cancel future automation in both live and offline modes.
+    this.wetGainNode.gain.cancelScheduledValues(t);
+    this.dryGainNode.gain.cancelScheduledValues(t);
+
     // wet: baseLevel → sustain (over attack time)
-    this.wetGainNode.gain.cancelScheduledValues(now);
     this._wetGainValue = baseLevel;
-    this.wetGainNode.gain.setValueAtTime(baseLevel, now);
-    this.wetGainNode.gain.linearRampToValueAtTime(sustain, now + attack);
+    this.wetGainNode.gain.setValueAtTime(baseLevel, t);
+    this.wetGainNode.gain.linearRampToValueAtTime(sustain, t + attack);
 
     // dry: mirrors wet
-    this.dryGainNode.gain.cancelScheduledValues(now);
     this._dryGainValue = 1 - baseLevel;
-    this.dryGainNode.gain.setValueAtTime(1 - baseLevel, now);
-    this.dryGainNode.gain.linearRampToValueAtTime(1 - sustain, now + attack);
+    this.dryGainNode.gain.setValueAtTime(1 - baseLevel, t);
+    this.dryGainNode.gain.linearRampToValueAtTime(1 - sustain, t + attack);
   }
 
-  releaseEnvelope(): void {
+  releaseEnvelope(at?: number): void {
     if (!this.enabled || !this.filterEnvelopeEnabled) return;
 
     const now = this.audioContext.currentTime;
+    const t = at ?? now;
     const { filterEnvelopeRelease: release, filterEnvelopeBaseLevel: baseLevel } = this;
-    const currentWet = this.wetGainNode.gain.value;
-    const currentDry = this.dryGainNode.gain.value;
+
+    // In offline mode gain.value reflects construction defaults, not the live audio-param
+    // value; use the sustain level as the presumed starting point for the release.
+    const currentWet = at !== undefined ? this.filterEnvelopeSustain : this.wetGainNode.gain.value;
+    const currentDry = at !== undefined ? (1 - this.filterEnvelopeSustain) : this.dryGainNode.gain.value;
+
+    // Cancel future automation in both live and offline modes.
+    this.wetGainNode.gain.cancelScheduledValues(t);
+    this.dryGainNode.gain.cancelScheduledValues(t);
 
     // wet: current → baseLevel; dry: current → (1 - baseLevel)
-    this.wetGainNode.gain.cancelScheduledValues(now);
-    this.wetGainNode.gain.setValueAtTime(currentWet, now);
-    this.wetGainNode.gain.linearRampToValueAtTime(baseLevel, now + release);
+    this.wetGainNode.gain.setValueAtTime(currentWet, t);
+    this.wetGainNode.gain.linearRampToValueAtTime(baseLevel, t + release);
 
-    this.dryGainNode.gain.cancelScheduledValues(now);
-    this.dryGainNode.gain.setValueAtTime(currentDry, now);
-    this.dryGainNode.gain.linearRampToValueAtTime(1 - baseLevel, now + release);
+    this.dryGainNode.gain.setValueAtTime(currentDry, t);
+    this.dryGainNode.gain.linearRampToValueAtTime(1 - baseLevel, t + release);
   }
 
   setParameters(params: FilterParameters): void {
@@ -242,13 +260,14 @@ export class FilterController {
     }
   }
 
-  trackNote(noteFrequency: number): void {
+  trackNote(noteFrequency: number, at?: number): void {
     this.lastTrackedNoteFrequency = noteFrequency;
     const now = this.audioContext.currentTime;
+    const t = at ?? now;
     const trackedFrequency = this.baseFrequency + 
       (noteFrequency - this.baseFrequency) * this.keyboardTracking;
     
-    this.filterNode.frequency.setValueAtTime(trackedFrequency, now);
+    this.filterNode.frequency.setValueAtTime(trackedFrequency, t);
   }
 
   private updateCompressorThreshold(q: number): void {

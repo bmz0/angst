@@ -593,4 +593,107 @@ describe('FilterController', () => {
       expect(() => controller.disconnect()).not.toThrow();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // getFrequencyParam
+  // ---------------------------------------------------------------------------
+
+  describe('getFrequencyParam', () => {
+    it('should return an AudioParam', () => {
+      controller = new FilterController({ audioContext, destination });
+
+      expect(controller.getFrequencyParam()).toBeInstanceOf(AudioParam);
+    });
+
+    it('should allow scheduling frequency automation directly on the returned param', () => {
+      controller = new FilterController({ audioContext, destination });
+      const param = controller.getFrequencyParam();
+
+      expect(() => param.setValueAtTime(2000, 0)).not.toThrow();
+      expect(() => param.linearRampToValueAtTime(4000, 1.0)).not.toThrow();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // triggerEnvelope / releaseEnvelope / trackNote with at? (offline scheduling)
+  // ---------------------------------------------------------------------------
+
+  describe('triggerEnvelope, releaseEnvelope, trackNote with at (offline scheduling)', () => {
+    it('should not throw when triggerEnvelope is called with absolute time', () => {
+      controller = new FilterController({
+        audioContext, destination,
+        enabled: true, envelopeEnabled: true,
+        envelopeAttack: 0.05, envelopeSustain: 0.7, envelopeRelease: 0.1,
+      });
+
+      expect(() => controller.triggerEnvelope(0.5)).not.toThrow();
+    });
+
+    it('should not throw when releaseEnvelope is called with absolute time', () => {
+      controller = new FilterController({
+        audioContext, destination,
+        enabled: true, envelopeEnabled: true,
+        envelopeAttack: 0.05, envelopeSustain: 0.7, envelopeRelease: 0.1,
+      });
+
+      controller.triggerEnvelope(0);
+      expect(() => controller.releaseEnvelope(0.5)).not.toThrow();
+    });
+
+    it('should not throw when trackNote is called with absolute time', () => {
+      controller = new FilterController({
+        audioContext, destination,
+        frequency: 1000, keyboardTracking: 0.5,
+      });
+
+      expect(() => controller.trackNote(440, 0.25)).not.toThrow();
+    });
+
+    it('should schedule multiple note trigger/release cycles without throwing', () => {
+      controller = new FilterController({
+        audioContext, destination,
+        enabled: true, envelopeEnabled: true,
+        envelopeAttack: 0.01, envelopeSustain: 0.7, envelopeRelease: 0.05,
+      });
+
+      expect(() => {
+        controller.triggerEnvelope(0);
+        controller.releaseEnvelope(0.3);
+        controller.triggerEnvelope(0.5);
+        controller.releaseEnvelope(0.8);
+        controller.triggerEnvelope(1.0);
+      }).not.toThrow();
+    });
+
+    it('should use filterEnvelopeSustain as starting point for offline release', () => {
+      controller = new FilterController({
+        audioContext, destination,
+        enabled: true, envelopeEnabled: true,
+        envelopeBaseLevel: 0,
+        envelopeAttack: 0.001, envelopeSustain: 0.8, envelopeRelease: 0.1,
+      });
+
+      controller.triggerEnvelope(0);
+      // releaseEnvelope with at should not throw even though gain.value has not
+      // been updated by the live audio thread
+      expect(() => controller.releaseEnvelope(0.5)).not.toThrow();
+    });
+
+    it('should combine trackNote with at and triggerEnvelope with at without throwing', () => {
+      controller = new FilterController({
+        audioContext, destination,
+        enabled: true, envelopeEnabled: true,
+        frequency: 1000, keyboardTracking: 0.5,
+        envelopeAttack: 0.01, envelopeSustain: 0.7, envelopeRelease: 0.05,
+      });
+
+      expect(() => {
+        controller.trackNote(440, 0);
+        controller.triggerEnvelope(0);
+        controller.releaseEnvelope(0.3);
+        controller.trackNote(660, 0.5);
+        controller.triggerEnvelope(0.5);
+      }).not.toThrow();
+    });
+  });
 });
