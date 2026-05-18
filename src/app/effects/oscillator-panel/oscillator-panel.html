@@ -39,16 +39,33 @@
       >Invert
     </label>
   </fieldset>
+
+  <fieldset class="voice-controls">
+    <legend>Polyphony</legend>
+    <div class="polyphony-selector">
+      @for (mode of polyphonyModes; track mode) {
+        <button
+          type="button"
+          class="polyphony-btn"
+          [class.polyphony-btn--active]="polyphonyMode() === mode"
+          (click)="onPolyphonyModeChange(mode)">
+          {{ mode }}
+        </button>
+      }
+    </div>
+    @if (polyphonyMode() === 'mono') {
+      <label>
+        Glide:
+        <input
+          type="range"
+          min="0"
+          max="0.5"
+          step="0.001"
+          [value]="glideTime()"
+          (input)="onGlideTimeChange(+$any($event.target).value)">
+        <span>{{ glideTime() * 1000 }}ms</span>
+      </label>
+    }
+  </fieldset>
   <ng-content></ng-content>
-  <label>
-    Glide:
-    <input
-      type="range"
-      min="0"
-      max="0.5"
-      step="0.001"
-      [value]="glideTime()"
-      (input)="onGlideTimeChange(+$any($event.target).value)">
-    <span>{{ glideTime() * 1000 }}ms</span>
-  </label>
 </div>

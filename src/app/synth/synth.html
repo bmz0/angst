@@ -12,6 +12,7 @@
   
   <div class="effects-controls">
     <filter-panel></filter-panel>
+    <ladder-filter-panel></ladder-filter-panel>
     <envelope-panel></envelope-panel>
     <delay-panel></delay-panel>
     <reverb-panel></reverb-panel>
@@ -22,7 +23,7 @@
     <piano-keyboard
       [(currentOctave)]="currentOctave"
       (notePressed)="play($event.note, $event.octaveOffset)"
-      (noteReleased)="stop()"
+      (noteReleased)="stop($event.note, $event.octaveOffset)"
       (octaveChanged)="onOctaveChanged($event)"
       (oscillatorTypeToggled)="toggleOscillatorType()">
     </piano-keyboard>

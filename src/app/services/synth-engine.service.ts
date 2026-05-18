@@ -5,6 +5,7 @@ import {
   DEFAULT_PATCH,
   SynthPatch,
   mergePatchWithParams,
+  synthPatchToEngineConfig,
   synthPatchToEngineParameters,
 } from '../synth/synth-patch.js';
 
@@ -15,8 +16,9 @@ export class SynthEngineService {
   private readonly audioCtx = inject(AudioContextService);
   private currentPatch: SynthPatch = { ...DEFAULT_PATCH };
 
-  initialize(config: Omit<SynthEngineConfig, 'audioContext' | 'destination'>): void {
+  async initialize(config: Omit<SynthEngineConfig, 'audioContext' | 'destination'>): Promise<void> {
     const ctx = this.audioCtx.getContext()!;
+    await SynthEngine.preload(ctx);
     this.analyser?.disconnect();
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 512;
@@ -66,12 +68,20 @@ export class SynthEngineService {
     this.engine?.play(frequency);
   }
 
+  playNote(noteId: number, frequency: number): void {
+    this.engine?.playNote(noteId, frequency);
+  }
+
   setDetune(cents: number): void {
     this.engine?.setDetune(cents);
   }
 
   stop(): void {
     this.engine?.stop();
+  }
+
+  stopNote(noteId: number): void {
+    this.engine?.stopNote(noteId);
   }
 
   isPlaying(): boolean {

@@ -1,10 +1,35 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { OscillatorController } from './oscillator.js';
+import {
+  OscillatorController,
+  type OscillatorConfig,
+  type PlaybackOptions,
+  type OscillatorParameters,
+} from './oscillator.js';
+
+// Minimal interface covering every method exercised by the shared test suite.
+interface IOscillatorController {
+  play(options: PlaybackOptions): void;
+  stop(releaseTime?: number, at?: number): void;
+  restart(options: Partial<PlaybackOptions>): void;
+  setParameters(params: OscillatorParameters): void;
+  setDetune(cents: number): void;
+  triggerPitchSweep(startHz: number, endHz: number, duration: number, at?: number): void;
+  isPlaying(): boolean;
+  getCurrentFrequency(): number | undefined;
+  getCurrentGain(): number;
+  isInverted(): boolean;
+  disconnect(): void;
+}
+
+// ---------------------------------------------------------------------------
+// OscillatorController behaviour tests
+// ---------------------------------------------------------------------------
 
 describe('OscillatorController', () => {
+  const Ctrl = OscillatorController;
   let audioContext: OfflineAudioContext;
   let destination: AudioNode;
-  let controller: OscillatorController;
+  let controller: IOscillatorController;
 
   beforeEach(() => {
     audioContext = new OfflineAudioContext({
@@ -21,7 +46,7 @@ describe('OscillatorController', () => {
 
   describe('constructor', () => {
     it('should create controller with default parameters', () => {
-      controller = new OscillatorController({ audioContext, destination });
+      controller = new Ctrl({ audioContext, destination });
 
       expect(controller).toBeDefined();
       expect(controller.isPlaying()).toBe(false);
@@ -31,26 +56,26 @@ describe('OscillatorController', () => {
     });
 
     it('should create controller with custom frequency', () => {
-      controller = new OscillatorController({ audioContext, destination, frequency: 880 });
+      controller = new Ctrl({ audioContext, destination, frequency: 880 });
 
       expect(controller.getCurrentFrequency()).toBe(880);
     });
 
     it('should create controller with custom gain', () => {
-      controller = new OscillatorController({ audioContext, destination, gain: 0.5 });
+      controller = new Ctrl({ audioContext, destination, gain: 0.5 });
 
       expect(controller.getCurrentGain()).toBeCloseTo(0.5);
     });
 
     it('should create controller with inverted phase', () => {
-      controller = new OscillatorController({ audioContext, destination, gain: 0.8, invert: true });
+      controller = new Ctrl({ audioContext, destination, gain: 0.8, invert: true });
 
       expect(controller.isInverted()).toBe(true);
       expect(controller.getCurrentGain()).toBeCloseTo(0.8);
     });
 
     it('should create controller with custom oscillator type', () => {
-      controller = new OscillatorController({ audioContext, destination, type: 'sawtooth' });
+      controller = new Ctrl({ audioContext, destination, type: 'sawtooth' });
 
       expect(controller).toBeDefined();
     });
@@ -58,7 +83,7 @@ describe('OscillatorController', () => {
 
   describe('play', () => {
     beforeEach(() => {
-      controller = new OscillatorController({ audioContext, destination, frequency: 440 });
+      controller = new Ctrl({ audioContext, destination, frequency: 440 });
     });
 
     it('should start playing', () => {
@@ -86,6 +111,7 @@ describe('OscillatorController', () => {
       controller.stop();
 
       await audioContext.startRendering();
+      await new Promise(r => setTimeout(r, 0));
 
       controller.play({ frequency: 660 });
 
@@ -97,9 +123,8 @@ describe('OscillatorController', () => {
       controller.play({ frequency: 440 });
       controller.stop();
 
-      // While in 'stopping' state, play() should dispose and restart
-      // without needing startRendering() since play() during stopping
-      // calls disposeOscillator() immediately
+      // Both implementations allow a new play() call while the old node is
+      // winding down; the new note must start without requiring startRendering().
       controller.play({ frequency: 880 });
 
       expect(controller.isPlaying()).toBe(true);
@@ -109,14 +134,14 @@ describe('OscillatorController', () => {
 
   describe('stop', () => {
     beforeEach(() => {
-      controller = new OscillatorController({ audioContext, destination });
+      controller = new Ctrl({ audioContext, destination });
     });
 
-    it('should transition to stopping state when stop is called', () => {
+    it('should remain isPlaying() after stop is called', () => {
       controller.play({ frequency: 440 });
       controller.stop();
 
-      // 'stopping' still counts as playing until 'ended' fires
+      // Still counts as playing until the winding-down node fires 'ended'
       expect(controller.isPlaying()).toBe(true);
     });
 
@@ -125,6 +150,7 @@ describe('OscillatorController', () => {
       controller.stop();
 
       await audioContext.startRendering();
+      await new Promise(r => setTimeout(r, 0));
 
       expect(controller.isPlaying()).toBe(false);
     });
@@ -144,7 +170,7 @@ describe('OscillatorController', () => {
 
   describe('restart', () => {
     beforeEach(() => {
-      controller = new OscillatorController({ audioContext, destination, frequency: 440 });
+      controller = new Ctrl({ audioContext, destination, frequency: 440 });
     });
 
     it('should restart with a new frequency', () => {
@@ -166,7 +192,7 @@ describe('OscillatorController', () => {
 
   describe('setParameters', () => {
     beforeEach(() => {
-      controller = new OscillatorController({ audioContext, destination });
+      controller = new Ctrl({ audioContext, destination });
     });
 
     it('should update gain', () => {
@@ -229,14 +255,14 @@ describe('OscillatorController', () => {
 
   describe('disconnect', () => {
     it('should not throw when disconnecting after playing', () => {
-      controller = new OscillatorController({ audioContext, destination });
+      controller = new Ctrl({ audioContext, destination });
       controller.play({ frequency: 440 });
 
       expect(() => controller.disconnect()).not.toThrow();
     });
 
     it('should not throw when disconnecting without playing', () => {
-      controller = new OscillatorController({ audioContext, destination });
+      controller = new Ctrl({ audioContext, destination });
 
       expect(() => controller.disconnect()).not.toThrow();
     });
@@ -248,7 +274,7 @@ describe('OscillatorController', () => {
 
   describe('play with at (offline scheduling)', () => {
     beforeEach(() => {
-      controller = new OscillatorController({ audioContext, destination, frequency: 440 });
+      controller = new Ctrl({ audioContext, destination, frequency: 440 });
     });
 
     it('should start playing when at is provided', () => {
@@ -348,7 +374,7 @@ describe('OscillatorController', () => {
 
   describe('triggerPitchSweep', () => {
     beforeEach(() => {
-      controller = new OscillatorController({ audioContext, destination, frequency: 440 });
+      controller = new Ctrl({ audioContext, destination, frequency: 440 });
     });
 
     it('should not throw when called while playing', () => {

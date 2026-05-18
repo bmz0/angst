@@ -83,8 +83,13 @@ describe('synthPatchFromJson', () => {
     expect(() => synthPatchFromJson(JSON.stringify(bad))).toThrow('"oscillator2Type"');
   });
 
+  it('accepts notch as a valid filterType value', () => {
+    const good = { ...DEFAULT_PATCH, filterType: 'notch' };
+    expect(() => synthPatchFromJson(JSON.stringify(good))).not.toThrow();
+  });
+
   it('throws when filterType has an invalid enum value', () => {
-    const bad = { ...DEFAULT_PATCH, filterType: 'notch' };
+    const bad = { ...DEFAULT_PATCH, filterType: 'comb' };
     expect(() => synthPatchFromJson(JSON.stringify(bad))).toThrow('"filterType"');
   });
 

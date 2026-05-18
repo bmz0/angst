@@ -69,64 +69,16 @@
       <span>{{ (filterPostGain() * 100).toFixed(0) }}%</span>
     </label>
 
-    <hr>
-
     <label>
+      Dry/Wet:
       <input
-        type="checkbox"
-        [checked]="filterEnvelopeEnabled()"
-        (change)="toggleFilterEnvelope()">
-      Mix Envelope
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        [value]="filterMix()"
+        (input)="onFilterMixChange(+$any($event.target).value)">
+      <span>{{ (filterMix() * 100).toFixed(0) }}%</span>
     </label>
-
-    @if (filterEnvelopeEnabled()) {
-      <label>
-        Filter Level:
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          [value]="filterEnvelopeBaseLevel()"
-          (input)="onFilterEnvelopeBaseLevelChange(+$any($event.target).value)">
-        <span>{{ (filterEnvelopeBaseLevel() * 100).toFixed(0) }}%</span>
-      </label>
-
-      <label>
-        Attack:
-        <input
-          type="range"
-          min="0.001"
-          max="2"
-          step="0.001"
-          [value]="filterEnvelopeAttack()"
-          (input)="onFilterEnvelopeAttackChange(+$any($event.target).value)">
-        <span>{{ (filterEnvelopeAttack() * 1000).toFixed(0) }}ms</span>
-      </label>
-
-      <label>
-        Sustain Level:
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          [value]="filterEnvelopeSustain()"
-          (input)="onFilterEnvelopeSustainChange(+$any($event.target).value)">
-        <span>{{ (filterEnvelopeSustain() * 100).toFixed(0) }}%</span>
-      </label>
-
-      <label>
-        Release:
-        <input
-          type="range"
-          min="0.001"
-          max="5"
-          step="0.001"
-          [value]="filterEnvelopeRelease()"
-          (input)="onFilterEnvelopeReleaseChange(+$any($event.target).value)">
-        <span>{{ (filterEnvelopeRelease() * 1000).toFixed(0) }}ms</span>
-      </label>
-    }
   }
 </fieldset>

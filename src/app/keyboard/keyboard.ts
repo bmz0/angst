@@ -35,7 +35,7 @@ interface PressedKey {
 export class Keyboard {
   public currentOctave = model(4);
   protected notePressed = output<NoteEvent>();
-  protected noteReleased = output<void>();
+  protected noteReleased = output<NoteEvent>();
   protected octaveChanged = output<number>();
   protected oscillatorTypeToggled = output<void>();
 
@@ -171,16 +171,17 @@ export class Keyboard {
     const releasedKey = this.pressedKeys[index];
     this.pressedKeys.splice(index, 1);
 
-    // Check if the released key was the currently active one
+    // Always emit targeted release for the released note's voice
+    this.noteReleased.emit({ note: releasedKey.note, octaveOffset: releasedKey.octaveOffset });
+
+    // If the released key was the active one, switch to the last remaining key
     const noteKey = this.getNoteKey(releasedKey.note, releasedKey.octaveOffset);
     if (this.activeNote === noteKey) {
       if (this.pressedKeys.length > 0) {
-        // Play the last remaining key
         const lastKey = this.pressedKeys[this.pressedKeys.length - 1];
         this.playNote(lastKey.note, lastKey.octaveOffset);
       } else {
-        // No keys left, stop playback
-        this.stop();
+        this.activeNote = undefined;
       }
     }
   }
@@ -202,20 +203,23 @@ export class Keyboard {
       this.pressedKeys.splice(index, 1);
     }
 
-    // If this was the active note, handle release logic
+    // Always emit targeted release for this note's voice
+    this.noteReleased.emit({ note, octaveOffset });
+
+    // If this was the active note, switch to last remaining key
     if (this.activeNote === noteKey) {
       if (this.pressedKeys.length > 0) {
         const lastKey = this.pressedKeys[this.pressedKeys.length - 1];
         this.playNote(lastKey.note, lastKey.octaveOffset);
       } else {
-        this.stop();
+        this.activeNote = undefined;
       }
     }
   }
 
-  protected stop(): void {
+  protected stop(note?: string, octaveOffset?: number): void {
     this.activeNote = undefined;
-    this.noteReleased.emit();
+    this.noteReleased.emit({ note: note ?? '', octaveOffset: octaveOffset ?? 0 });
   }
 
   protected isActive(note: string, octaveOffset: number = 0): boolean {

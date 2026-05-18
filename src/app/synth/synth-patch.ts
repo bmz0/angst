@@ -1,8 +1,10 @@
 import type { OscillatorType } from '../utils/oscillator.js';
 import type { SupportedFilterType } from '../utils/filter.js';
+import type { LadderFilterParameters } from '../utils/ladder-filter.js';
 import type { OverdriveType } from '../utils/overdrive.js';
 import type { RectifierMode } from '../utils/rectifier.js';
 import type { SynthEngineConfig, SynthEngineParameters } from './synthEngine.js';
+import type { PolyphonyMode } from './voice-manager.js';
 
 export interface SynthPatch {
   // Oscillators
@@ -13,6 +15,7 @@ export interface SynthPatch {
   oscillator2SubOctave: boolean;
   oscillator2Invert: boolean;
   glideTime: number;
+  polyphonyMode: PolyphonyMode;
 
   // Filter
   filterEnabled: boolean;
@@ -21,11 +24,15 @@ export interface SynthPatch {
   filterQ: number;
   filterKeyboardTracking: number;
   filterPostGain: number;
-  filterEnvelopeEnabled: boolean;
-  filterEnvelopeAttack: number;
-  filterEnvelopeSustain: number;
-  filterEnvelopeRelease: number;
-  filterEnvelopeBaseLevel: number;
+  filterMix: number;
+
+  // Ladder Filter
+  ladderFilterEnabled: boolean;
+  ladderFilterFrequency: number;
+  ladderFilterResonance: number;
+  ladderFilterDrive: number;
+  ladderFilterKeyboardTracking: number;
+  ladderFilterPostGain: number;
 
   // Amp Envelope
   envelopeEnabled: boolean;
@@ -75,6 +82,7 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   oscillator2SubOctave: true,
   oscillator2Invert: true,
   glideTime: 0.04,
+  polyphonyMode: 'mono',
 
   filterEnabled: true,
   filterType: 'lowpass',
@@ -82,11 +90,14 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   filterQ: 16,
   filterKeyboardTracking: 0.38,
   filterPostGain: 1,
-  filterEnvelopeEnabled: false,
-  filterEnvelopeAttack: 0.005,
-  filterEnvelopeSustain: 1.0,
-  filterEnvelopeRelease: 0.5,
-  filterEnvelopeBaseLevel: 0,
+  filterMix: 1,
+
+  ladderFilterEnabled: false,
+  ladderFilterFrequency: 2000,
+  ladderFilterResonance: 1.5,
+  ladderFilterDrive: 1,
+  ladderFilterKeyboardTracking: 0.38,
+  ladderFilterPostGain: 1,
 
   envelopeEnabled: true,
   envelopeAttack: 0.233,
@@ -131,9 +142,10 @@ export function synthPatchToJson(patch: SynthPatch): string {
 }
 
 const OSCILLATOR_TYPES = new Set<string>(['sine', 'square', 'sawtooth', 'triangle']);
-const FILTER_TYPES = new Set<string>(['lowpass', 'highpass', 'bandpass']);
+const FILTER_TYPES = new Set<string>(['lowpass', 'highpass', 'bandpass', 'notch']);
 const DISTORTION_TYPES = new Set<string>(['soft', 'fold']);
 const RECTIFIER_MODES = new Set<string>(['half', 'full']);
+const POLYPHONY_MODES = new Set<string>(['mono', 'duo', 'quad']);
 
 export function synthPatchFromJson(json: string): SynthPatch {
   let raw: unknown;
@@ -180,6 +192,18 @@ export function synthPatchFromJson(json: string): SynthPatch {
     return value;
   };
 
+  // For fields added after the initial release: fall back to a default when
+  // the key is absent so that older saved patches still deserialise correctly.
+  const numberOr = (key: string, fallback: number): number => {
+    if (p[key] === undefined) return fallback;
+    return requireNumber(key);
+  };
+
+  const booleanOr = (key: string, fallback: boolean): boolean => {
+    if (p[key] === undefined) return fallback;
+    return requireBoolean(key);
+  };
+
   return {
     oscillator1Type: requireEnum('oscillator1Type', OSCILLATOR_TYPES) as OscillatorType,
     oscillator2Type: requireEnum('oscillator2Type', OSCILLATOR_TYPES) as OscillatorType,
@@ -188,6 +212,7 @@ export function synthPatchFromJson(json: string): SynthPatch {
     oscillator2SubOctave: requireBoolean('oscillator2SubOctave'),
     oscillator2Invert: requireBoolean('oscillator2Invert'),
     glideTime: requireNumber('glideTime'),
+    polyphonyMode: (p['polyphonyMode'] === undefined ? 'mono' : requireEnum('polyphonyMode', POLYPHONY_MODES)) as PolyphonyMode,
 
     filterEnabled: requireBoolean('filterEnabled'),
     filterType: requireEnum('filterType', FILTER_TYPES) as SupportedFilterType,
@@ -195,11 +220,14 @@ export function synthPatchFromJson(json: string): SynthPatch {
     filterQ: requireNumber('filterQ'),
     filterKeyboardTracking: requireNumber('filterKeyboardTracking'),
     filterPostGain: requireNumber('filterPostGain'),
-    filterEnvelopeEnabled: requireBoolean('filterEnvelopeEnabled'),
-    filterEnvelopeAttack: requireNumber('filterEnvelopeAttack'),
-    filterEnvelopeSustain: requireNumber('filterEnvelopeSustain'),
-    filterEnvelopeRelease: requireNumber('filterEnvelopeRelease'),
-    filterEnvelopeBaseLevel: requireNumber('filterEnvelopeBaseLevel'),
+    filterMix: numberOr('filterMix', 1),
+
+    ladderFilterEnabled: booleanOr('ladderFilterEnabled', false),
+    ladderFilterFrequency: numberOr('ladderFilterFrequency', 2000),
+    ladderFilterResonance: numberOr('ladderFilterResonance', 1.5),
+    ladderFilterDrive: numberOr('ladderFilterDrive', 1),
+    ladderFilterKeyboardTracking: numberOr('ladderFilterKeyboardTracking', 0.38),
+    ladderFilterPostGain: numberOr('ladderFilterPostGain', 1),
 
     envelopeEnabled: requireBoolean('envelopeEnabled'),
     envelopeAttack: requireNumber('envelopeAttack'),
@@ -256,6 +284,7 @@ export function synthPatchToEngineConfig(
     oscillator2SubOctave: patch.oscillator2SubOctave,
     oscillator2Invert: patch.oscillator2Invert,
     glideTime: patch.glideTime,
+    polyphonyMode: patch.polyphonyMode,
 
     filterEnabled: patch.filterEnabled,
     filterType: patch.filterType,
@@ -263,11 +292,14 @@ export function synthPatchToEngineConfig(
     filterQ: patch.filterQ,
     filterKeyboardTracking: patch.filterKeyboardTracking,
     filterPostGain: patch.filterPostGain,
-    filterEnvelopeEnabled: patch.filterEnvelopeEnabled,
-    filterEnvelopeAttack: patch.filterEnvelopeAttack,
-    filterEnvelopeSustain: patch.filterEnvelopeSustain,
-    filterEnvelopeRelease: patch.filterEnvelopeRelease,
-    filterEnvelopeBaseLevel: patch.filterEnvelopeBaseLevel,
+    filterMix: patch.filterMix,
+
+    ladderFilterEnabled: patch.ladderFilterEnabled,
+    ladderFilterFrequency: patch.ladderFilterFrequency,
+    ladderFilterResonance: patch.ladderFilterResonance,
+    ladderFilterDrive: patch.ladderFilterDrive,
+    ladderFilterKeyboardTracking: patch.ladderFilterKeyboardTracking,
+    ladderFilterPostGain: patch.ladderFilterPostGain,
 
     envelopeEnabled: patch.envelopeEnabled,
     envelopeAttack: patch.envelopeAttack,
@@ -316,6 +348,7 @@ export function mergePatchWithParams(patch: SynthPatch, params: SynthEngineParam
   if (params.oscillator2SubOctave !== undefined) p.oscillator2SubOctave = params.oscillator2SubOctave;
   if (params.oscillator2Invert !== undefined) p.oscillator2Invert = params.oscillator2Invert;
   if (params.glideTime !== undefined) p.glideTime = params.glideTime;
+  if (params.polyphonyMode !== undefined) p.polyphonyMode = params.polyphonyMode;
 
   if (params.filter?.enabled !== undefined) p.filterEnabled = params.filter.enabled;
   if (params.filter?.type !== undefined) p.filterType = params.filter.type;
@@ -323,11 +356,14 @@ export function mergePatchWithParams(patch: SynthPatch, params: SynthEngineParam
   if (params.filter?.Q !== undefined) p.filterQ = params.filter.Q;
   if (params.filter?.keyboardTracking !== undefined) p.filterKeyboardTracking = params.filter.keyboardTracking;
   if (params.filter?.postGain !== undefined) p.filterPostGain = params.filter.postGain;
-  if (params.filter?.envelopeEnabled !== undefined) p.filterEnvelopeEnabled = params.filter.envelopeEnabled;
-  if (params.filter?.envelopeAttack !== undefined) p.filterEnvelopeAttack = params.filter.envelopeAttack;
-  if (params.filter?.envelopeSustain !== undefined) p.filterEnvelopeSustain = params.filter.envelopeSustain;
-  if (params.filter?.envelopeRelease !== undefined) p.filterEnvelopeRelease = params.filter.envelopeRelease;
-  if (params.filter?.envelopeBaseLevel !== undefined) p.filterEnvelopeBaseLevel = params.filter.envelopeBaseLevel;
+  if (params.filter?.mix !== undefined) p.filterMix = params.filter.mix;
+
+  if (params.ladderFilter?.enabled !== undefined) p.ladderFilterEnabled = params.ladderFilter.enabled;
+  if (params.ladderFilter?.frequency !== undefined) p.ladderFilterFrequency = params.ladderFilter.frequency;
+  if (params.ladderFilter?.resonance !== undefined) p.ladderFilterResonance = params.ladderFilter.resonance;
+  if (params.ladderFilter?.drive !== undefined) p.ladderFilterDrive = params.ladderFilter.drive;
+  if (params.ladderFilter?.keyboardTracking !== undefined) p.ladderFilterKeyboardTracking = params.ladderFilter.keyboardTracking;
+  if (params.ladderFilter?.postGain !== undefined) p.ladderFilterPostGain = params.ladderFilter.postGain;
 
   if (params.envelope?.enabled !== undefined) p.envelopeEnabled = params.envelope.enabled;
   if (params.envelope?.attack !== undefined) p.envelopeAttack = params.envelope.attack;
@@ -367,6 +403,7 @@ export function mergePatchWithParams(patch: SynthPatch, params: SynthEngineParam
  */
 export function synthPatchToEngineParameters(patch: SynthPatch): SynthEngineParameters {
   return {
+    polyphonyMode: patch.polyphonyMode,
     oscillator1Type: patch.oscillator1Type,
     oscillator2Type: patch.oscillator2Type,
     oscillator1Amount: patch.oscillator1Amount,
@@ -382,11 +419,16 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
       Q: patch.filterQ,
       keyboardTracking: patch.filterKeyboardTracking,
       postGain: patch.filterPostGain,
-      envelopeEnabled: patch.filterEnvelopeEnabled,
-      envelopeAttack: patch.filterEnvelopeAttack,
-      envelopeSustain: patch.filterEnvelopeSustain,
-      envelopeRelease: patch.filterEnvelopeRelease,
-      envelopeBaseLevel: patch.filterEnvelopeBaseLevel,
+      mix: patch.filterMix,
+    },
+
+    ladderFilter: {
+      enabled: patch.ladderFilterEnabled,
+      frequency: patch.ladderFilterFrequency,
+      resonance: patch.ladderFilterResonance,
+      drive: patch.ladderFilterDrive,
+      keyboardTracking: patch.ladderFilterKeyboardTracking,
+      postGain: patch.ladderFilterPostGain,
     },
 
     envelope: {

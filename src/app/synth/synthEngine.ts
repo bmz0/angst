@@ -1,14 +1,17 @@
 import { DelayController, DelayParameters } from '../utils/delay.js';
 import { ReverbController, ReverbParameters } from '../utils/reverb.js';
-import { OverdriveController, OverdriveParameters } from '../utils/overdrive.js';
-import { RectifierController, RectifierMode, RectifierParameters } from '../utils/rectifier.js';
-import { EnvelopeController, EnvelopeParameters } from '../utils/envelope.js';
+import { OverdriveParameters } from '../utils/overdrive.js';
+import { RectifierMode, RectifierParameters } from '../utils/rectifier.js';
+import { EnvelopeParameters } from '../utils/envelope.js';
 import { FilterController, FilterParameters, SupportedFilterType } from '../utils/filter.js';
-import { OscillatorController, OscillatorType } from '../utils/oscillator.js';
+import { LadderFilterController, LadderFilterParameters } from '../utils/ladder-filter.js';
+import { OscillatorType } from '../utils/oscillator.js';
+import { VoiceManager, PolyphonyMode } from './voice-manager.js';
 
 export interface SynthEngineConfig {
   audioContext: BaseAudioContext;
   destination: AudioNode;
+  polyphonyMode?: PolyphonyMode;
   oscillator1Type?: OscillatorType;
   oscillator2Type?: OscillatorType;
   oscillator1Amount?: number;
@@ -22,11 +25,13 @@ export interface SynthEngineConfig {
   filterQ?: number;
   filterKeyboardTracking?: number;
   filterPostGain?: number;
-  filterEnvelopeEnabled?: boolean;
-  filterEnvelopeAttack?: number;
-  filterEnvelopeSustain?: number;
-  filterEnvelopeRelease?: number;
-  filterEnvelopeBaseLevel?: number;
+  filterMix?: number;
+  ladderFilterEnabled?: boolean;
+  ladderFilterFrequency?: number;
+  ladderFilterResonance?: number;
+  ladderFilterDrive?: number;
+  ladderFilterKeyboardTracking?: number;
+  ladderFilterPostGain?: number;
   overdriveEnabled?: boolean;
   overdriveAmount?: number;
   overdriveFold?: boolean;
@@ -54,6 +59,7 @@ export interface SynthEngineConfig {
 }
 
 export interface SynthEngineParameters {
+  polyphonyMode?: PolyphonyMode;
   oscillator1Type?: OscillatorType;
   oscillator2Type?: OscillatorType;
   oscillator1Amount?: number;
@@ -62,6 +68,7 @@ export interface SynthEngineParameters {
   oscillator2Invert?: boolean;
   glideTime?: number;
   filter?: FilterParameters;
+  ladderFilter?: LadderFilterParameters;
   overdrive?: OverdriveParameters;
   rectifier?: RectifierParameters;
   delay?: DelayParameters;
@@ -70,29 +77,28 @@ export interface SynthEngineParameters {
 }
 
 export class SynthEngine {
-  private mixerGain: GainNode;
+  private voiceManager: VoiceManager;
   private filterController: FilterController;
-  private overdriveController: OverdriveController;
-  private rectifierController: RectifierController;
+  private ladderFilterController: LadderFilterController;
   private delayController: DelayController;
   private reverbController: ReverbController;
-  private oscillatorController1: OscillatorController;
-  private oscillatorController2: OscillatorController;
-  private envelopeController: EnvelopeController;
   private readonly audioContext: BaseAudioContext;
-  private oscillator2SubOctave: boolean;
-  private oscillator2Invert: boolean;
-  private oscillator1Amount: number;
-  private oscillator2Amount: number;
-  private glideTime: number;
+  private lastNoteId = 0;
+
+  /**
+   * Loads all AudioWorklet modules required by the engine into the given
+   * AudioContext.  Must be awaited before constructing a SynthEngine instance
+   * so that worklet processors are registered and ready for instantiation.
+   *
+   * Call this once from SynthEngineService.initialize() before building the
+   * engine.  It is a no-op on OfflineAudioContext (audioWorklet may be absent).
+   */
+  static async preload(ctx: AudioContext): Promise<void> {
+    await ctx.audioWorklet.addModule('ladder-filter.worklet.js');
+  }
 
   constructor(config: SynthEngineConfig) {
     this.audioContext = config.audioContext;
-    this.oscillator2SubOctave = config.oscillator2SubOctave ?? true;
-    this.oscillator2Invert = config.oscillator2Invert ?? false;
-    this.oscillator1Amount = config.oscillator1Amount ?? 1;
-    this.oscillator2Amount = config.oscillator2Amount ?? 1;
-    this.glideTime = config.glideTime ?? 0;
 
     this.reverbController = new ReverbController({
       audioContext: this.audioContext,
@@ -117,150 +123,102 @@ export class SynthEngine {
       delayPan: config.delayPan ?? 0,
     });
 
-    this.envelopeController = new EnvelopeController({
+    this.ladderFilterController = new LadderFilterController({
       audioContext: this.audioContext,
       destination: this.delayController.getInput(),
-      enabled: config.envelopeEnabled ?? true,
-      attack: config.envelopeAttack ?? 0.005,
-      decay: config.envelopeDecay ?? 0.1,
-      sustain: config.envelopeSustain ?? 0.7,
-      release: config.envelopeRelease ?? 0.5
+      frequency: config.ladderFilterFrequency ?? 2000,
+      resonance: config.ladderFilterResonance ?? 1.5,
+      drive: config.ladderFilterDrive ?? 1,
+      enabled: config.ladderFilterEnabled ?? false,
+      keyboardTracking: config.ladderFilterKeyboardTracking ?? 0.38,
+      postGain: config.ladderFilterPostGain ?? 1,
     });
 
     this.filterController = new FilterController({
       audioContext: this.audioContext,
-      destination: this.envelopeController.getInput(),
+      destination: this.ladderFilterController.getInput(),
       type: config.filterType ?? 'lowpass',
       frequency: config.filterFrequency ?? 1000,
       Q: config.filterQ ?? 1,
       enabled: config.filterEnabled ?? false,
       keyboardTracking: config.filterKeyboardTracking ?? 0.5,
       postGain: config.filterPostGain ?? 1,
-      envelopeEnabled: config.filterEnvelopeEnabled ?? false,
-      envelopeAttack: config.filterEnvelopeAttack ?? 0.005,
-      envelopeSustain: config.filterEnvelopeSustain ?? 0.7,
-      envelopeRelease: config.filterEnvelopeRelease ?? 0.5,
-      envelopeBaseLevel: config.filterEnvelopeBaseLevel ?? 0,
+      mix: config.filterMix ?? 1,
     });
 
-    this.overdriveController = new OverdriveController({
+    this.voiceManager = new VoiceManager({
       audioContext: this.audioContext,
       destination: this.filterController.getInput(),
-      type: config.overdriveFold ? 'fold' : 'soft',
-      amount: config.overdriveAmount ?? 0,
-      enabled: config.overdriveEnabled ?? false
-    });
-
-    this.rectifierController = new RectifierController({
-      audioContext: this.audioContext,
-      destination: this.overdriveController.getInput(),
-      mode: config.rectifierMode ?? 'half',
-      bias: config.rectifierBias ?? 0,
-      enabled: config.rectifierEnabled ?? false
-    });
-
-    this.mixerGain = this.audioContext.createGain();
-    this.mixerGain.gain.value = 1;
-    this.mixerGain.connect(this.rectifierController.getInput());
-
-    this.oscillatorController1 = new OscillatorController({
-      audioContext: this.audioContext,
-      type: config.oscillator1Type ?? 'sine',
-      gain: this.oscillator1Amount,
-      frequency: 440,
-      destination: this.mixerGain
-    });
-
-    this.oscillatorController2 = new OscillatorController({
-      audioContext: this.audioContext,
-      type: config.oscillator2Type ?? 'square',
-      gain: this.oscillator2Amount,
-      invert: this.oscillator2Invert,
-      frequency: 220,
-      destination: this.mixerGain
+      polyphonyMode: config.polyphonyMode,
+      oscillator1Type: config.oscillator1Type,
+      oscillator2Type: config.oscillator2Type,
+      oscillator1Amount: config.oscillator1Amount,
+      oscillator2Amount: config.oscillator2Amount,
+      oscillator2SubOctave: config.oscillator2SubOctave,
+      oscillator2Invert: config.oscillator2Invert,
+      glideTime: config.glideTime,
+      envelopeEnabled: config.envelopeEnabled,
+      envelopeAttack: config.envelopeAttack,
+      envelopeDecay: config.envelopeDecay,
+      envelopeSustain: config.envelopeSustain,
+      envelopeRelease: config.envelopeRelease,
+      overdriveEnabled: config.overdriveEnabled,
+      overdriveAmount: config.overdriveAmount,
+      overdriveFold: config.overdriveFold,
+      rectifierEnabled: config.rectifierEnabled,
+      rectifierMode: config.rectifierMode,
+      rectifierBias: config.rectifierBias,
     });
   }
 
   play(frequency: number, at?: number): void {
-    const osc2Frequency = this.oscillator2SubOctave ? frequency / 2 : frequency;
-    this.oscillatorController1.play({ frequency, glideTime: this.glideTime, at });
-    this.oscillatorController2.play({ frequency: osc2Frequency, glideTime: this.glideTime, at });
-    
+    this.playNote(frequency, frequency, at);
+  }
+
+  playNote(noteId: number, frequency: number, at?: number): void {
+    this.lastNoteId = noteId;
+    this.voiceManager.play(noteId, frequency, at);
     this.filterController.trackNote(frequency, at);
-    this.filterController.triggerEnvelope(at);
-    this.envelopeController.trigger(at);
+    this.ladderFilterController.trackNote(frequency, at);
   }
 
   stop(at?: number): void {
-    const releaseTime = this.envelopeController.getParams().release;
-    this.filterController.releaseEnvelope(at);
-    this.envelopeController.release(at);
+    this.voiceManager.stopAll(at);
+  }
 
-    // Oscillators must keep running through the full release tail so the
-    // envelope fade can render completely. Add a small epsilon (5 ms) to
-    // ensure the oscillator is not hard-cut while the gain is still > 0.
-    const EPSILON = 0.005;
-    this.oscillatorController1.stop(releaseTime + EPSILON, at);
-    this.oscillatorController2.stop(releaseTime + EPSILON, at);
+  stopNote(noteId: number, at?: number): void {
+    this.voiceManager.stop(noteId, at);
   }
 
   isPlaying(): boolean {
-    return this.oscillatorController1.isPlaying();
+    return this.voiceManager.isPlaying();
   }
 
   setParameters(params: SynthEngineParameters): void {
-    if (params.oscillator1Type !== undefined) {
-      this.oscillatorController1.setParameters({ type: params.oscillator1Type });
-    }
+    const voiceParams: import('./voice-manager.js').VoiceManagerParameters = {};
 
-    if (params.oscillator2Type !== undefined) {
-      this.oscillatorController2.setParameters({type: params.oscillator2Type});
-    }
+    if (params.polyphonyMode !== undefined) voiceParams.polyphonyMode = params.polyphonyMode;
+    if (params.oscillator1Type !== undefined) voiceParams.oscillator1Type = params.oscillator1Type;
+    if (params.oscillator2Type !== undefined) voiceParams.oscillator2Type = params.oscillator2Type;
+    if (params.oscillator1Amount !== undefined) voiceParams.oscillator1Amount = params.oscillator1Amount;
+    if (params.oscillator2Amount !== undefined) voiceParams.oscillator2Amount = params.oscillator2Amount;
+    if (params.oscillator2SubOctave !== undefined) voiceParams.oscillator2SubOctave = params.oscillator2SubOctave;
+    if (params.oscillator2Invert !== undefined) voiceParams.oscillator2Invert = params.oscillator2Invert;
+    if (params.glideTime !== undefined) voiceParams.glideTime = params.glideTime;
+    if (params.envelope !== undefined) voiceParams.envelope = params.envelope;
+    if (params.overdrive !== undefined) voiceParams.overdrive = params.overdrive;
+    if (params.rectifier !== undefined) voiceParams.rectifier = params.rectifier;
 
-    if (params.oscillator1Amount !== undefined) {
-      this.oscillator1Amount = params.oscillator1Amount;
-      this.oscillatorController1.setParameters({ gain: this.oscillator1Amount });
-    }
-
-    if (params.oscillator2Amount !== undefined || params.oscillator2Invert !== undefined) {
-      if (params.oscillator2Amount !== undefined) {
-        this.oscillator2Amount = params.oscillator2Amount;
-      }
-      if (params.oscillator2Invert !== undefined) {
-        this.oscillator2Invert = params.oscillator2Invert;
-      }
-
-      this.oscillatorController2.setParameters({ invert: this.oscillator2Invert, gain: this.oscillator2Amount });
-    }
-
-    if (params.oscillator2SubOctave !== undefined) {
-      this.oscillator2SubOctave = params.oscillator2SubOctave;
-      const currentFrequency = this.oscillatorController1.getCurrentFrequency() ?? 440;
-      const osc2Frequency = this.oscillator2SubOctave ? currentFrequency / 2 : currentFrequency;
-
-      if (this.isPlaying()) {
-        // Use a shared future-dated timestamp so both oscillators stop and restart
-        // on the exact same audio-thread sample frame, preserving their phase relationship.
-        const at = this.audioContext.currentTime + 0.001;
-        this.oscillatorController1.restart({ frequency: currentFrequency, at });
-        this.oscillatorController2.restart({ frequency: osc2Frequency, at });
-      }
-    }
-
-    if (params.glideTime !== undefined) {
-      this.glideTime = params.glideTime;
+    if (Object.keys(voiceParams).length > 0) {
+      this.voiceManager.setParameters(voiceParams);
     }
 
     if (params.filter !== undefined) {
       this.filterController.setParameters(params.filter);
     }
 
-    if (params.overdrive !== undefined) {
-      this.overdriveController.setParameters(params.overdrive);
-    }
-
-    if (params.rectifier !== undefined) {
-      this.rectifierController.setParameters(params.rectifier);
+    if (params.ladderFilter !== undefined) {
+      this.ladderFilterController.setParameters(params.ladderFilter);
     }
 
     if (params.delay !== undefined) {
@@ -270,26 +228,17 @@ export class SynthEngine {
     if (params.reverb !== undefined) {
       this.reverbController.setParameters(params.reverb);
     }
-
-    if (params.envelope !== undefined) {
-      this.envelopeController.setParameters(params.envelope);
-    }
   }
 
   setDetune(cents: number): void {
-    this.oscillatorController1.setDetune(cents);
-    this.oscillatorController2.setDetune(cents);
+    this.voiceManager.setDetune(cents);
   }
 
   disconnect(): void {
-    this.oscillatorController1.disconnect();
-    this.oscillatorController2.disconnect();
-    this.envelopeController.disconnect();
+    this.voiceManager.disconnect();
     this.filterController.disconnect();
-    this.rectifierController.disconnect();
-    this.overdriveController.disconnect();
+    this.ladderFilterController.disconnect();
     this.delayController.disconnect();
     this.reverbController.disconnect();
-    this.mixerGain.disconnect();
   }
 }

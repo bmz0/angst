@@ -2,6 +2,7 @@ import { Component, effect, inject, signal } from '@angular/core';
 import { OscillatorSelector } from '../../oscillator-selector/oscillator-selector.js';
 import { OscillatorType } from '../../utils/oscillator.js';
 import { SynthEngineService } from '../../services/synth-engine.service.js';
+import { PolyphonyMode } from '../../synth/voice-manager.js';
 
 @Component({
   selector: 'oscillator-panel',
@@ -19,6 +20,9 @@ export class OscillatorPanel {
   protected oscillator2SubOctave = signal(this.synthEngineService.getPatch().oscillator2SubOctave);
   protected oscillator2Invert = signal(this.synthEngineService.getPatch().oscillator2Invert);
   protected glideTime = signal(this.synthEngineService.getPatch().glideTime);
+  protected polyphonyMode = signal<PolyphonyMode>(this.synthEngineService.getPatch().polyphonyMode);
+
+  protected readonly polyphonyModes: PolyphonyMode[] = ['mono', 'duo', 'quad'];
 
   private readonly oscillatorTypes: OscillatorType[] = ['sine', 'square', 'sawtooth', 'triangle'];
 
@@ -58,5 +62,10 @@ export class OscillatorPanel {
   protected onOscillator2InvertChange(): void {
     this.oscillator2Invert.update(invert => !invert);
     this.synthEngineService.setParameters({ oscillator2Invert: this.oscillator2Invert() });
+  }
+
+  protected onPolyphonyModeChange(mode: PolyphonyMode): void {
+    this.polyphonyMode.set(mode);
+    this.synthEngineService.setParameters({ polyphonyMode: mode });
   }
 }

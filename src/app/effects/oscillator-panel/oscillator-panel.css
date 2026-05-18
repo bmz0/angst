@@ -52,3 +52,30 @@ span {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.voice-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.polyphony-selector {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.polyphony-btn {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid darkcyan;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.polyphony-btn--active {
+  background: darkcyan;
+  color: white;
+}

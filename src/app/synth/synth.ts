@@ -5,6 +5,7 @@ import { OscillatorPanel } from '../effects/oscillator-panel/oscillator-panel.js
 import { OverdrivePanel } from '../effects/overdrive-panel/overdrive-panel.js';
 import { RectifierPanel } from '../effects/rectifier-panel/rectifier-panel.js';
 import { FilterPanel } from '../effects/filter-panel/filter-panel.js';
+import { LadderFilterPanel } from '../effects/ladder-filter-panel/ladder-filter-panel.js';
 import { EnvelopePanel } from '../effects/envelope-panel/envelope-panel.js';
 import { DelayPanel } from '../effects/delay-panel/delay-panel.js';
 import { ReverbPanel } from '../effects/reverb-panel/reverb-panel.js';
@@ -15,7 +16,7 @@ import { DEFAULT_PATCH, synthPatchToEngineConfig } from './synth-patch.js';
 
 @Component({
   selector: 'app-synth',
-  imports: [Keyboard, Visualizer, OscillatorPanel, OverdrivePanel, RectifierPanel, FilterPanel, EnvelopePanel, DelayPanel, ReverbPanel, ArpeggiatorPanel],
+  imports: [Keyboard, Visualizer, OscillatorPanel, OverdrivePanel, RectifierPanel, FilterPanel, LadderFilterPanel, EnvelopePanel, DelayPanel, ReverbPanel, ArpeggiatorPanel],
   templateUrl: './synth.html',
   styleUrl: './synth.css',
   standalone: true
@@ -31,6 +32,8 @@ export class Synth {
 
   protected currentOctave = signal(4);
   private activeVisualizerTimeout: number | null = null;
+  /** Maps key identity (e.g. "C-0") to the frequency that was actually played. */
+  private readonly playedNotes = new Map<string, number>();
 
   constructor() {
     this.init();
@@ -42,22 +45,26 @@ export class Synth {
     });
   }
 
-  private init(): void {
-    this.synthEngineService.initialize(synthPatchToEngineConfig(DEFAULT_PATCH));
+  private async init(): Promise<void> {
+    await this.synthEngineService.initialize(synthPatchToEngineConfig(DEFAULT_PATCH));
   }
 
   protected play(note: string, octaveOffset: number = 0): void {
     const octave = this.currentOctave() + octaveOffset;
     const scientificNotation = `${note}${octave}`;
     const baseFrequency = getFrequency(scientificNotation);
+
+    // Track which frequency this key identity maps to (for correct release)
+    const keyId = `${note}-${octaveOffset}`;
+    this.playedNotes.set(keyId, baseFrequency);
     
     if (this.arpeggiatorPanel().isEnabled()) {
-      this.synthEngineService.play(baseFrequency);
+      this.synthEngineService.playNote(baseFrequency, baseFrequency);
       this.arpeggiatorPanel().start((semitoneOffset) => {
         this.synthEngineService.setDetune(semitoneOffset * 100);
       });
     } else {
-      this.synthEngineService.play(baseFrequency);
+      this.synthEngineService.playNote(baseFrequency, baseFrequency);
     }
 
     if (this.synthEngineService.isPlaying()) {
@@ -69,15 +76,29 @@ export class Synth {
     }
   }
 
-  protected stop(): void {
+  protected stop(note?: string, octaveOffset?: number): void {
     const releaseTime = this.envelopePanel().getRelease();
 
-    this.synthEngineService.stop();
-    this.activeVisualizerTimeout = setTimeout(() => {
-      this.arpeggiatorPanel().stop();
-      this.visualizerRef().stop();
-      this.activeVisualizerTimeout = null;
-    }, (5 + releaseTime) * 1000);
+    if (note) {
+      const keyId = `${note}-${octaveOffset ?? 0}`;
+      const frequency = this.playedNotes.get(keyId);
+      this.playedNotes.delete(keyId);
+      if (frequency !== undefined) {
+        this.synthEngineService.stopNote(frequency);
+      }
+    } else {
+      // Stop all — clear tracked notes
+      this.playedNotes.clear();
+      this.synthEngineService.stop();
+    }
+
+    if (!this.synthEngineService.isPlaying() && !this.activeVisualizerTimeout) {
+      this.activeVisualizerTimeout = setTimeout(() => {
+        this.arpeggiatorPanel().stop();
+        this.visualizerRef().stop();
+        this.activeVisualizerTimeout = null;
+      }, (5 + releaseTime) * 1000);
+    }
   }
 
   protected onOctaveChanged(octave: number): void {
