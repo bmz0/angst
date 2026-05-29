@@ -36,6 +36,7 @@ export class OscillatorController {
   private readonly audioContext: BaseAudioContext;
   private readonly destination: AudioNode;
   private oscillatorType: OscillatorType = 'sine';
+  private pitchModSource: AudioNode | null = null;
 
   constructor(config: OscillatorConfig) {
     this.audioContext = config.audioContext;
@@ -52,7 +53,9 @@ export class OscillatorController {
     this.oscillatorNode = this.audioContext.createOscillator();
     this.oscillatorNode.type = this.oscillatorType;
     this.oscillatorNode.frequency.value = this.currentFrequency;
-
+    if (this.pitchModSource) {
+      this.pitchModSource.connect(this.oscillatorNode.detune);
+    }
     this.oscillatorNode.connect(this.gainNode);
   }
 
@@ -159,6 +162,9 @@ export class OscillatorController {
 
   disposeOscillator(): void {
     if (this.oscillatorNode) {
+      if (this.pitchModSource) {
+        try { this.pitchModSource.disconnect(this.oscillatorNode.detune); } catch { /* not connected */ }
+      }
       this.oscillatorNode.disconnect(this.gainNode);
       this.oscillatorNode = null;
     }
@@ -190,6 +196,22 @@ export class OscillatorController {
     if (this.oscillatorNode) {
       this.oscillatorNode.detune.setValueAtTime(cents, this.audioContext.currentTime);
     }
+  }
+
+  /** Connect or disconnect an AudioNode as an additive pitch modulation source (targets detune, in cents). */
+  setPitchModSource(source: AudioNode | null): void {
+    if (this.pitchModSource && this.oscillatorNode) {
+      try { this.pitchModSource.disconnect(this.oscillatorNode.detune); } catch { /* not connected */ }
+    }
+    this.pitchModSource = source;
+    if (source && this.oscillatorNode) {
+      source.connect(this.oscillatorNode.detune);
+    }
+  }
+
+  /** Exposes the persistent gain AudioParam for a-rate modulation (e.g. LFO). */
+  getGainParam(): AudioParam {
+    return this.gainNode.gain;
   }
 
   isPlaying(): boolean {

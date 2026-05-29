@@ -72,8 +72,19 @@ export class SynthEngineService {
     this.engine?.playNote(noteId, frequency);
   }
 
-  setDetune(cents: number): void {
-    this.engine?.setDetune(cents);
+  private pitchBendCents = 0;
+  private arpDetuneCents = 0;
+
+  /** Sets the detune contribution from the arpeggiator (in cents). */
+  setArpDetune(cents: number): void {
+    this.arpDetuneCents = cents;
+    this.engine?.setDetune(this.pitchBendCents + this.arpDetuneCents);
+  }
+
+  /** Sets the detune contribution from MIDI pitch bend (in cents). */
+  setPitchBendDetune(cents: number): void {
+    this.pitchBendCents = cents;
+    this.engine?.setDetune(this.pitchBendCents + this.arpDetuneCents);
   }
 
   stop(): void {
@@ -86,6 +97,10 @@ export class SynthEngineService {
 
   isPlaying(): boolean {
     return this.engine?.isPlaying() ?? false;
+  }
+
+  getLfoElapsedTime(index: number): number {
+    return this.engine?.getLfoElapsedTime(index) ?? 0;
   }
 
   disconnect(): void {

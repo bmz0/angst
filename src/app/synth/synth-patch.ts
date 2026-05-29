@@ -5,6 +5,7 @@ import type { OverdriveType } from '../utils/overdrive.js';
 import type { RectifierMode } from '../utils/rectifier.js';
 import type { SynthEngineConfig, SynthEngineParameters } from './synthEngine.js';
 import type { PolyphonyMode } from './voice-manager.js';
+import type { LfoTarget } from '../utils/lfo.js';
 
 export interface SynthPatch {
   // Oscillators
@@ -72,6 +73,38 @@ export interface SynthPatch {
   arpeggiatorEnabled: boolean;
   arpeggiatorTempo: number;
   arpeggiatorPattern: string;
+
+  // LFO 1
+  lfoEnabled: boolean;
+  lfoTarget: LfoTarget;
+  lfoRate: number;
+  lfoDepth: number;
+  lfoShape: OscillatorType;
+  lfoRetrigger: boolean;
+  lfoFadeIn: number;
+
+  // LFO 2
+  lfo2Enabled: boolean;
+  lfo2Target: LfoTarget;
+  lfo2Rate: number;
+  lfo2Depth: number;
+  lfo2Shape: OscillatorType;
+  lfo2Retrigger: boolean;
+  lfo2FadeIn: number;
+
+  // LFO 3
+  lfo3Enabled: boolean;
+  lfo3Target: LfoTarget;
+  lfo3Rate: number;
+  lfo3Depth: number;
+  lfo3Shape: OscillatorType;
+  lfo3Retrigger: boolean;
+  lfo3FadeIn: number;
+
+  // MIDI CC modulation targets (-1 = disabled)
+  lfo1DepthCC: number;
+  lfo2DepthCC: number;
+  lfo3DepthCC: number;
 }
 
 export const DEFAULT_PATCH: Readonly<SynthPatch> = {
@@ -93,17 +126,17 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   filterMix: 1,
 
   ladderFilterEnabled: false,
-  ladderFilterFrequency: 2000,
-  ladderFilterResonance: 1.5,
-  ladderFilterDrive: 1,
+  ladderFilterFrequency: 4000,
+  ladderFilterResonance: 2.5,
+  ladderFilterDrive: 4,
   ladderFilterKeyboardTracking: 0.38,
   ladderFilterPostGain: 1,
 
   envelopeEnabled: true,
-  envelopeAttack: 0.233,
-  envelopeDecay: 0.316,
+  envelopeAttack: 0.053,
+  envelopeDecay: 0.116,
   envelopeSustain: 0.7,
-  envelopeRelease: 0.62,
+  envelopeRelease: 0.12,
 
   overdriveEnabled: true,
   overdriveType: 'fold',
@@ -113,14 +146,14 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   rectifierMode: 'half',
   rectifierBias: 0,
 
-  delayEnabled: true,
+  delayEnabled: false,
   delayTime: 0.3,
   delayFeedback: 0.3,
   delayMix: 0.3,
   delayPingPong: true,
   delayPan: 0.3,
 
-  reverbEnabled: false,
+  reverbEnabled: true,
   reverbRoomSize: 4.0,
   reverbDecay: 14.5,
   reverbMix: 0.13,
@@ -131,6 +164,34 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   arpeggiatorEnabled: false,
   arpeggiatorTempo: 300,
   arpeggiatorPattern: '037',
+
+  lfoEnabled: false,
+  lfoTarget: 'filterFrequency',
+  lfoRate: 2,
+  lfoDepth: 0,
+  lfoShape: 'sine',
+  lfoRetrigger: true,
+  lfoFadeIn: 0,
+
+  lfo2Enabled: false,
+  lfo2Target: 'filterQ',
+  lfo2Rate: 2,
+  lfo2Depth: 0,
+  lfo2Shape: 'sine',
+  lfo2Retrigger: true,
+  lfo2FadeIn: 0,
+
+  lfo3Enabled: false,
+  lfo3Target: 'lfo1Rate',
+  lfo3Rate: 2,
+  lfo3Depth: 0,
+  lfo3Shape: 'sine',
+  lfo3Retrigger: true,
+  lfo3FadeIn: 0,
+
+  lfo1DepthCC: -1,
+  lfo2DepthCC: -1,
+  lfo3DepthCC: -1,
 };
 
 // ---------------------------------------------------------------------------
@@ -146,6 +207,12 @@ const FILTER_TYPES = new Set<string>(['lowpass', 'highpass', 'bandpass', 'notch'
 const DISTORTION_TYPES = new Set<string>(['soft', 'fold']);
 const RECTIFIER_MODES = new Set<string>(['half', 'full']);
 const POLYPHONY_MODES = new Set<string>(['mono', 'duo', 'quad']);
+const LFO_TARGETS = new Set<string>([
+  'filterFrequency', 'filterQ', 'ladderFilterFrequency',
+  'ladderFilterResonance', 'delayMix', 'reverbMix', 'oscMix',
+  'oscPreGain', 'oscPostGain', 'oscPitch', 'lfo1Rate', 'lfo1Depth',
+  'lfo2Rate', 'lfo2Depth',
+]);
 
 export function synthPatchFromJson(json: string): SynthPatch {
   let raw: unknown;
@@ -261,6 +328,46 @@ export function synthPatchFromJson(json: string): SynthPatch {
     arpeggiatorEnabled: requireBoolean('arpeggiatorEnabled'),
     arpeggiatorTempo: requireNumber('arpeggiatorTempo'),
     arpeggiatorPattern: requireString('arpeggiatorPattern'),
+
+    lfoEnabled: booleanOr('lfoEnabled', false),
+    lfoTarget: (p['lfoTarget'] === undefined
+      ? 'filterFrequency'
+      : requireEnum('lfoTarget', LFO_TARGETS)) as LfoTarget,
+    lfoRate: numberOr('lfoRate', 2),
+    lfoDepth: numberOr('lfoDepth', 0),
+    lfoShape: (p['lfoShape'] === undefined
+      ? 'sine'
+      : requireEnum('lfoShape', OSCILLATOR_TYPES)) as OscillatorType,
+    lfoRetrigger: booleanOr('lfoRetrigger', true),
+    lfoFadeIn: numberOr('lfoFadeIn', 0),
+
+    lfo2Enabled: booleanOr('lfo2Enabled', false),
+    lfo2Target: (p['lfo2Target'] === undefined
+      ? 'filterQ'
+      : requireEnum('lfo2Target', LFO_TARGETS)) as LfoTarget,
+    lfo2Rate: numberOr('lfo2Rate', 2),
+    lfo2Depth: numberOr('lfo2Depth', 0),
+    lfo2Shape: (p['lfo2Shape'] === undefined
+      ? 'sine'
+      : requireEnum('lfo2Shape', OSCILLATOR_TYPES)) as OscillatorType,
+    lfo2Retrigger: booleanOr('lfo2Retrigger', true),
+    lfo2FadeIn: numberOr('lfo2FadeIn', 0),
+
+    lfo3Enabled: booleanOr('lfo3Enabled', false),
+    lfo3Target: (p['lfo3Target'] === undefined
+      ? 'lfo1Rate'
+      : requireEnum('lfo3Target', LFO_TARGETS)) as LfoTarget,
+    lfo3Rate: numberOr('lfo3Rate', 2),
+    lfo3Depth: numberOr('lfo3Depth', 0),
+    lfo3Shape: (p['lfo3Shape'] === undefined
+      ? 'sine'
+      : requireEnum('lfo3Shape', OSCILLATOR_TYPES)) as OscillatorType,
+    lfo3Retrigger: booleanOr('lfo3Retrigger', true),
+    lfo3FadeIn: numberOr('lfo3FadeIn', 0),
+
+    lfo1DepthCC: numberOr('lfo1DepthCC', -1),
+    lfo2DepthCC: numberOr('lfo2DepthCC', -1),
+    lfo3DepthCC: numberOr('lfo3DepthCC', -1),
   };
 }
 
@@ -394,6 +501,30 @@ export function mergePatchWithParams(patch: SynthPatch, params: SynthEngineParam
   if (params.reverb?.preDelay !== undefined) p.reverbPreDelay = params.reverb.preDelay;
   if (params.reverb?.hpFrequency !== undefined) p.reverbHpFrequency = params.reverb.hpFrequency;
 
+  if (params.lfo1?.enabled !== undefined) p.lfoEnabled = params.lfo1.enabled;
+  if (params.lfo1?.target !== undefined) p.lfoTarget = params.lfo1.target;
+  if (params.lfo1?.rate !== undefined) p.lfoRate = params.lfo1.rate;
+  if (params.lfo1?.depth !== undefined) p.lfoDepth = params.lfo1.depth;
+  if (params.lfo1?.shape !== undefined) p.lfoShape = params.lfo1.shape;
+  if (params.lfo1?.retrigger !== undefined) p.lfoRetrigger = params.lfo1.retrigger;
+  if (params.lfo1?.fadeIn !== undefined) p.lfoFadeIn = params.lfo1.fadeIn;
+
+  if (params.lfo2?.enabled !== undefined) p.lfo2Enabled = params.lfo2.enabled;
+  if (params.lfo2?.target !== undefined) p.lfo2Target = params.lfo2.target;
+  if (params.lfo2?.rate !== undefined) p.lfo2Rate = params.lfo2.rate;
+  if (params.lfo2?.depth !== undefined) p.lfo2Depth = params.lfo2.depth;
+  if (params.lfo2?.shape !== undefined) p.lfo2Shape = params.lfo2.shape;
+  if (params.lfo2?.retrigger !== undefined) p.lfo2Retrigger = params.lfo2.retrigger;
+  if (params.lfo2?.fadeIn !== undefined) p.lfo2FadeIn = params.lfo2.fadeIn;
+
+  if (params.lfo3?.enabled !== undefined) p.lfo3Enabled = params.lfo3.enabled;
+  if (params.lfo3?.target !== undefined) p.lfo3Target = params.lfo3.target;
+  if (params.lfo3?.rate !== undefined) p.lfo3Rate = params.lfo3.rate;
+  if (params.lfo3?.depth !== undefined) p.lfo3Depth = params.lfo3.depth;
+  if (params.lfo3?.shape !== undefined) p.lfo3Shape = params.lfo3.shape;
+  if (params.lfo3?.retrigger !== undefined) p.lfo3Retrigger = params.lfo3.retrigger;
+  if (params.lfo3?.fadeIn !== undefined) p.lfo3FadeIn = params.lfo3.fadeIn;
+
   return { ...patch, ...p };
 }
 
@@ -468,6 +599,36 @@ export function synthPatchToEngineParameters(patch: SynthPatch): SynthEnginePara
       color: patch.reverbColor,
       preDelay: patch.reverbPreDelay,
       hpFrequency: patch.reverbHpFrequency,
+    },
+
+    lfo1: {
+      enabled: patch.lfoEnabled,
+      target: patch.lfoTarget,
+      rate: patch.lfoRate,
+      depth: patch.lfoDepth,
+      shape: patch.lfoShape,
+      retrigger: patch.lfoRetrigger,
+      fadeIn: patch.lfoFadeIn,
+    },
+
+    lfo2: {
+      enabled: patch.lfo2Enabled,
+      target: patch.lfo2Target,
+      rate: patch.lfo2Rate,
+      depth: patch.lfo2Depth,
+      shape: patch.lfo2Shape,
+      retrigger: patch.lfo2Retrigger,
+      fadeIn: patch.lfo2FadeIn,
+    },
+
+    lfo3: {
+      enabled: patch.lfo3Enabled,
+      target: patch.lfo3Target,
+      rate: patch.lfo3Rate,
+      depth: patch.lfo3Depth,
+      shape: patch.lfo3Shape,
+      retrigger: patch.lfo3Retrigger,
+      fadeIn: patch.lfo3FadeIn,
     },
   };
 }

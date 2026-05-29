@@ -72,6 +72,10 @@ export class ReverbController {
     return this.inputNode;
   }
 
+  getWetGainParam(): AudioParam {
+    return this.wetGainNode.gain;
+  }
+
   setParameters(params: ReverbParameters): void {
     const now = this.audioContext.currentTime;
     let shouldUpdateBypass = false;

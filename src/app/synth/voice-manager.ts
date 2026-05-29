@@ -60,6 +60,10 @@ export class VoiceManager {
   private readonly voices: Voice[] = [];
   private readonly heldNotes: { noteId: number; frequency: number }[] = [];
   private voiceDefaults: Omit<VoiceConfig, 'audioContext' | 'destination'>;
+  private oscMixModSource: AudioNode | null = null;
+  private oscPreGainModSource: AudioNode | null = null;
+  private oscPostGainModSource: AudioNode | null = null;
+  private pitchModSource: AudioNode | null = null;
 
   constructor(config: VoiceManagerConfig) {
     this.audioContext = config.audioContext;
@@ -136,6 +140,10 @@ export class VoiceManager {
       destination: this.destination,
       ...this.voiceDefaults,
     });
+    if (this.oscMixModSource) voice.setOscMixModulation(this.oscMixModSource);
+    if (this.oscPreGainModSource) voice.setOscPreGainModulation(this.oscPreGainModSource);
+    if (this.oscPostGainModSource) voice.setOscPostGainModulation(this.oscPostGainModSource);
+    if (this.pitchModSource) voice.setPitchModulation(this.pitchModSource);
     voice.setNoteId(noteId);
     voice.play(frequency, at);
     this.voices.push(voice);
@@ -198,6 +206,36 @@ export class VoiceManager {
   setDetune(cents: number): void {
     for (const voice of this.voices) {
       voice.setDetune(cents);
+    }
+  }
+
+  /** Connect or disconnect an AudioNode source from every current voice's osc mix
+   * modulation input, and store it so newly-created voices receive it automatically. */
+  setOscMixModulation(source: AudioNode | null): void {
+    this.oscMixModSource = source;
+    for (const voice of this.voices) {
+      voice.setOscMixModulation(source);
+    }
+  }
+
+  setOscPreGainModulation(source: AudioNode | null): void {
+    this.oscPreGainModSource = source;
+    for (const voice of this.voices) {
+      voice.setOscPreGainModulation(source);
+    }
+  }
+
+  setOscPostGainModulation(source: AudioNode | null): void {
+    this.oscPostGainModSource = source;
+    for (const voice of this.voices) {
+      voice.setOscPostGainModulation(source);
+    }
+  }
+
+  setPitchModulation(source: AudioNode | null): void {
+    this.pitchModSource = source;
+    for (const voice of this.voices) {
+      voice.setPitchModulation(source);
     }
   }
 
@@ -321,6 +359,10 @@ export class VoiceManager {
         ...this.voiceDefaults,
       });
       voice.setNoteId(held.noteId);
+      if (this.oscMixModSource) voice.setOscMixModulation(this.oscMixModSource);
+      if (this.oscPreGainModSource) voice.setOscPreGainModulation(this.oscPreGainModSource);
+      if (this.oscPostGainModSource) voice.setOscPostGainModulation(this.oscPostGainModSource);
+      if (this.pitchModSource) voice.setPitchModulation(this.pitchModSource);
       // Note was already held — resume at sustain level, no attack retrigger.
       voice.recover(held.frequency, at);
       this.voices.push(voice);

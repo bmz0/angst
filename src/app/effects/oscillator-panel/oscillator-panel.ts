@@ -1,7 +1,8 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
 import { OscillatorSelector } from '../../oscillator-selector/oscillator-selector.js';
 import { OscillatorType } from '../../utils/oscillator.js';
 import { SynthEngineService } from '../../services/synth-engine.service.js';
+import { MidiService } from '../../services/midi.service.js';
 import { PolyphonyMode } from '../../synth/voice-manager.js';
 
 @Component({
@@ -13,6 +14,8 @@ import { PolyphonyMode } from '../../synth/voice-manager.js';
 })
 export class OscillatorPanel {
   private readonly synthEngineService = inject(SynthEngineService);
+  private readonly midiService = inject(MidiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected oscillator1Type = signal<OscillatorType>(this.synthEngineService.getPatch().oscillator1Type);
   protected oscillator2Type = signal<OscillatorType>(this.synthEngineService.getPatch().oscillator2Type);
@@ -33,6 +36,10 @@ export class OscillatorPanel {
     effect(() => {
       this.synthEngineService.setParameters({ oscillator2Type: this.oscillator2Type() });
     });
+
+    // CC #1 (mod wheel) controls osc 1→2 mix: heel = full osc1, toe = full osc2
+    const unregister = this.midiService.registerCcHandler(1, (v) => this.onOscillatorMixChange(v));
+    this.destroyRef.onDestroy(unregister);
   }
 
   toggleOscillator1Type(): void {

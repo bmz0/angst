@@ -78,6 +78,10 @@ export class DelayController {
     return this.inputNode;
   }
 
+  getWetGainParam(): AudioParam {
+    return this.wetGainNode.gain;
+  }
+
   getCurrentPan(): number {
     return this.currentPan;
   }

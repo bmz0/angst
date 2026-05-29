@@ -10,13 +10,15 @@ import { EnvelopePanel } from '../effects/envelope-panel/envelope-panel.js';
 import { DelayPanel } from '../effects/delay-panel/delay-panel.js';
 import { ReverbPanel } from '../effects/reverb-panel/reverb-panel.js';
 import { ArpeggiatorPanel } from '../effects/arpeggiator-panel/arpeggiator-panel.js';
+import { LfoPanel } from '../effects/lfo-panel/lfo-panel.js';
 import { SynthEngineService } from '../services/synth-engine.service.js';
+import { MidiService } from '../services/midi.service.js';
 import { getFrequency } from '../utils/common.js';
 import { DEFAULT_PATCH, synthPatchToEngineConfig } from './synth-patch.js';
 
 @Component({
   selector: 'app-synth',
-  imports: [Keyboard, Visualizer, OscillatorPanel, OverdrivePanel, RectifierPanel, FilterPanel, LadderFilterPanel, EnvelopePanel, DelayPanel, ReverbPanel, ArpeggiatorPanel],
+  imports: [Keyboard, Visualizer, OscillatorPanel, OverdrivePanel, RectifierPanel, FilterPanel, LadderFilterPanel, EnvelopePanel, DelayPanel, ReverbPanel, ArpeggiatorPanel, LfoPanel],
   templateUrl: './synth.html',
   styleUrl: './synth.css',
   standalone: true
@@ -28,6 +30,7 @@ export class Synth {
   private readonly arpeggiatorPanel = viewChild.required(ArpeggiatorPanel);
 
   private readonly synthEngineService = inject(SynthEngineService);
+  private readonly midiService = inject(MidiService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected currentOctave = signal(4);
@@ -38,7 +41,30 @@ export class Synth {
   constructor() {
     this.init();
 
+    this.midiService.onNoteOn = () => {
+      if (this.synthEngineService.isPlaying()) {
+        if (this.activeVisualizerTimeout) {
+          clearTimeout(this.activeVisualizerTimeout);
+          this.activeVisualizerTimeout = null;
+        }
+        this.visualizerRef().start();
+      }
+    };
+
+    this.midiService.onNoteOff = () => {
+      if (!this.synthEngineService.isPlaying() && !this.activeVisualizerTimeout) {
+        const releaseTime = this.envelopePanel().getRelease();
+        this.activeVisualizerTimeout = setTimeout(() => {
+          this.arpeggiatorPanel().stop();
+          this.visualizerRef().stop();
+          this.activeVisualizerTimeout = null;
+        }, (5 + releaseTime) * 1000);
+      }
+    };
+
     this.destroyRef.onDestroy(() => {
+      this.midiService.onNoteOn = undefined;
+      this.midiService.onNoteOff = undefined;
       if (this.activeVisualizerTimeout) clearTimeout(this.activeVisualizerTimeout);
       this.arpeggiatorPanel().stop();
       this.synthEngineService.disconnect();
@@ -47,6 +73,7 @@ export class Synth {
 
   private async init(): Promise<void> {
     await this.synthEngineService.initialize(synthPatchToEngineConfig(DEFAULT_PATCH));
+    await this.midiService.initialize();
   }
 
   protected play(note: string, octaveOffset: number = 0): void {
@@ -61,7 +88,7 @@ export class Synth {
     if (this.arpeggiatorPanel().isEnabled()) {
       this.synthEngineService.playNote(baseFrequency, baseFrequency);
       this.arpeggiatorPanel().start((semitoneOffset) => {
-        this.synthEngineService.setDetune(semitoneOffset * 100);
+        this.synthEngineService.setArpDetune(semitoneOffset * 100);
       });
     } else {
       this.synthEngineService.playNote(baseFrequency, baseFrequency);
@@ -110,6 +137,6 @@ export class Synth {
   }
 
   protected onArpeggiatorStoppedWhilePlaying(): void {
-    this.synthEngineService.setDetune(0);
+    this.synthEngineService.setArpDetune(0);
   }
 }

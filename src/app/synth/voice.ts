@@ -38,6 +38,16 @@ export class Voice {
   private readonly overdrive: OverdriveController;
   private readonly outputGain: GainNode;
   private readonly mixerGain: GainNode;
+  // Osc mix LFO fan-out nodes. The LFO source connects to oscMixModInput;
+  // osc1ModGain (gain=−1) inverts it for osc1, osc2ModGain (±1) respects the
+  // oscillator2 invert flag so the crossfade is always correct regardless of phase.
+  private readonly oscMixModInput: GainNode;
+  private readonly osc1ModGain: GainNode;
+  private readonly osc2ModGain: GainNode;
+  private currentOscMixSource: AudioNode | null = null;
+  private currentOscPreGainSource: AudioNode | null = null;
+  private currentOscPostGainSource: AudioNode | null = null;
+  private currentPitchModSource: AudioNode | null = null;
   private oscillator2SubOctave: boolean;
   private glideTime: number;
   private noteId: number | null = null;
@@ -100,6 +110,20 @@ export class Voice {
       invert: config.oscillator2Invert ?? false,
       frequency: 220,
     });
+
+    // Osc mix LFO fan-out: a single input node fans out to per-osc signed gains,
+    // which then add to each oscillator's persistent gain AudioParam.
+    this.oscMixModInput = this.audioContext.createGain();
+    this.oscMixModInput.gain.value = 1;
+    this.osc1ModGain = this.audioContext.createGain();
+    this.osc1ModGain.gain.value = -1; // LFO increase → osc1 quieter
+    this.osc2ModGain = this.audioContext.createGain();
+    // Respect osc2 invert: inverted gain is negative, so subtract to make it louder.
+    this.osc2ModGain.gain.value = (config.oscillator2Invert ?? false) ? -1 : 1;
+    this.oscMixModInput.connect(this.osc1ModGain);
+    this.osc1ModGain.connect(this.oscillator1.getGainParam());
+    this.oscMixModInput.connect(this.osc2ModGain);
+    this.osc2ModGain.connect(this.oscillator2.getGainParam());
   }
 
   play(frequency: number, at?: number): void {
@@ -173,7 +197,48 @@ export class Voice {
       this.oscillator1.setParameters(params);
     } else {
       this.oscillator2.setParameters(params);
+      // Keep osc2ModGain sign in sync with the invert flag so the crossfade LFO
+      // always pushes osc2 louder (regardless of phase inversion).
+      if (params.invert !== undefined) {
+        this.osc2ModGain.gain.value = params.invert ? -1 : 1;
+      }
     }
+  }
+
+  /** Connect or disconnect an AudioNode source from the osc mix modulation input. */
+  setOscMixModulation(source: AudioNode | null): void {
+    if (this.currentOscMixSource) {
+      try { this.currentOscMixSource.disconnect(this.oscMixModInput); } catch { /* not connected */ }
+    }
+    this.currentOscMixSource = source;
+    if (source) {
+      source.connect(this.oscMixModInput);
+    }
+  }
+
+  /** Modulate the pre-distortion mixer gain (osc1+osc2 combined level before rectifier/overdrive). */
+  setOscPreGainModulation(source: AudioNode | null): void {
+    if (this.currentOscPreGainSource) {
+      try { this.currentOscPreGainSource.disconnect(this.mixerGain.gain); } catch { /* not connected */ }
+    }
+    this.currentOscPreGainSource = source;
+    if (source) source.connect(this.mixerGain.gain);
+  }
+
+  /** Modulate the post-distortion output gain (after envelope, before destination). */
+  setOscPostGainModulation(source: AudioNode | null): void {
+    if (this.currentOscPostGainSource) {
+      try { this.currentOscPostGainSource.disconnect(this.outputGain.gain); } catch { /* not connected */ }
+    }
+    this.currentOscPostGainSource = source;
+    if (source) source.connect(this.outputGain.gain);
+  }
+
+  /** Modulate oscillator pitch (both osc1 and osc2 detune AudioParams, in cents). */
+  setPitchModulation(source: AudioNode | null): void {
+    this.currentPitchModSource = source;
+    this.oscillator1.setPitchModSource(source);
+    this.oscillator2.setPitchModSource(source);
   }
 
   setEnvelopeParameters(params: EnvelopeParameters): void {
@@ -235,5 +300,8 @@ export class Voice {
     this.overdrive.disconnect();
     this.outputGain.disconnect();
     this.mixerGain.disconnect();
+    this.oscMixModInput.disconnect();
+    this.osc1ModGain.disconnect();
+    this.osc2ModGain.disconnect();
   }
 }

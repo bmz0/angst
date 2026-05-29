@@ -114,6 +114,10 @@ export class LadderFilterController {
     return this.param('cutoff');
   }
 
+  getResonanceParam(): AudioParam {
+    return this.param('resonance');
+  }
+
   getDryGainValue(): number {
     return this._dryGainValue;
   }

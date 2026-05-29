@@ -6,6 +6,7 @@ import { EnvelopeParameters } from '../utils/envelope.js';
 import { FilterController, FilterParameters, SupportedFilterType } from '../utils/filter.js';
 import { LadderFilterController, LadderFilterParameters } from '../utils/ladder-filter.js';
 import { OscillatorType } from '../utils/oscillator.js';
+import { LfoController, LfoParameters, LfoTarget } from '../utils/lfo.js';
 import { VoiceManager, PolyphonyMode } from './voice-manager.js';
 
 export interface SynthEngineConfig {
@@ -74,6 +75,9 @@ export interface SynthEngineParameters {
   delay?: DelayParameters;
   reverb?: ReverbParameters;
   envelope?: EnvelopeParameters;
+  lfo1?: LfoParameters;
+  lfo2?: LfoParameters;
+  lfo3?: LfoParameters;
 }
 
 export class SynthEngine {
@@ -82,8 +86,14 @@ export class SynthEngine {
   private ladderFilterController: LadderFilterController;
   private delayController: DelayController;
   private reverbController: ReverbController;
+  private lfoControllers: LfoController[];
   private readonly audioContext: BaseAudioContext;
   private lastNoteId = 0;
+  private lfoTargets: (LfoTarget | null)[] = [null, null, null];
+  private lfoEnabled: boolean[] = [false, false, false];
+  private lfoRetrigger: boolean[] = [true, true, true];
+  private delayEnabled: boolean;
+  private reverbEnabled: boolean;
 
   /**
    * Loads all AudioWorklet modules required by the engine into the given
@@ -99,6 +109,8 @@ export class SynthEngine {
 
   constructor(config: SynthEngineConfig) {
     this.audioContext = config.audioContext;
+    this.delayEnabled = config.delayEnabled ?? false;
+    this.reverbEnabled = config.reverbEnabled ?? false;
 
     this.reverbController = new ReverbController({
       audioContext: this.audioContext,
@@ -169,6 +181,12 @@ export class SynthEngine {
       rectifierMode: config.rectifierMode,
       rectifierBias: config.rectifierBias,
     });
+
+    this.lfoControllers = [
+      new LfoController(this.audioContext),
+      new LfoController(this.audioContext),
+      new LfoController(this.audioContext),
+    ];
   }
 
   play(frequency: number, at?: number): void {
@@ -177,6 +195,11 @@ export class SynthEngine {
 
   playNote(noteId: number, frequency: number, at?: number): void {
     this.lastNoteId = noteId;
+    for (let i = 0; i < 3; i++) {
+      if (this.lfoRetrigger[i] && this.lfoEnabled[i]) {
+        this.lfoControllers[i].retrigger();
+      }
+    }
     this.voiceManager.play(noteId, frequency, at);
     this.filterController.trackNote(frequency, at);
     this.ladderFilterController.trackNote(frequency, at);
@@ -222,23 +245,136 @@ export class SynthEngine {
     }
 
     if (params.delay !== undefined) {
+      const wasDelayEnabled = this.delayEnabled;
+      if (params.delay.enabled !== undefined) this.delayEnabled = params.delay.enabled;
       this.delayController.setParameters(params.delay);
+      // Prevent LFO bleed through a disabled bypass.
+      if (params.delay.enabled !== undefined) {
+        for (let i = 0; i < 3; i++) {
+          if (this.lfoEnabled[i] && this.lfoTargets[i] === 'delayMix') {
+            if (!this.delayEnabled) {
+              this.lfoControllers[i].disconnectFrom(this.delayController.getWetGainParam());
+            } else if (!wasDelayEnabled) {
+              this.lfoControllers[i].connectTo(this.delayController.getWetGainParam());
+            }
+          }
+        }
+      }
     }
 
     if (params.reverb !== undefined) {
+      const wasReverbEnabled = this.reverbEnabled;
+      if (params.reverb.enabled !== undefined) this.reverbEnabled = params.reverb.enabled;
       this.reverbController.setParameters(params.reverb);
+      if (params.reverb.enabled !== undefined) {
+        for (let i = 0; i < 3; i++) {
+          if (this.lfoEnabled[i] && this.lfoTargets[i] === 'reverbMix') {
+            if (!this.reverbEnabled) {
+              this.lfoControllers[i].disconnectFrom(this.reverbController.getWetGainParam());
+            } else if (!wasReverbEnabled) {
+              this.lfoControllers[i].connectTo(this.reverbController.getWetGainParam());
+            }
+          }
+        }
+      }
     }
+
+    // Handle LFO1, LFO2, LFO3 parameters
+    this.processLfoParameters(0, params.lfo1);
+    this.processLfoParameters(1, params.lfo2);
+    this.processLfoParameters(2, params.lfo3);
   }
 
   setDetune(cents: number): void {
     this.voiceManager.setDetune(cents);
   }
 
+  getLfoElapsedTime(index: number): number {
+    if (index < 0 || index >= this.lfoControllers.length) return 0;
+    return this.lfoControllers[index].getElapsedTime();
+  }
+
   disconnect(): void {
+    this.lfoControllers.forEach(lfo => lfo.disconnect());
     this.voiceManager.disconnect();
     this.filterController.disconnect();
     this.ladderFilterController.disconnect();
     this.delayController.disconnect();
     this.reverbController.disconnect();
+  }
+
+  private processLfoParameters(lfoIndex: number, lfoParams?: LfoParameters): void {
+    if (lfoParams === undefined) return;
+
+    const lfo = this.lfoControllers[lfoIndex];
+    if (lfoParams.fadeIn !== undefined) lfo.setFadeIn(lfoParams.fadeIn);
+    if (lfoParams.rate !== undefined) lfo.setRate(lfoParams.rate);
+    if (lfoParams.depth !== undefined) lfo.setDepth(lfoParams.depth);
+    if (lfoParams.shape !== undefined) lfo.setShape(lfoParams.shape);
+    if (lfoParams.retrigger !== undefined) this.lfoRetrigger[lfoIndex] = lfoParams.retrigger;
+
+    // Process target and enabled together so mixed updates are always coherent.
+    if (lfoParams.target !== undefined || lfoParams.enabled !== undefined) {
+      const wasEnabled = this.lfoEnabled[lfoIndex];
+      const newTarget = lfoParams.target ?? this.lfoTargets[lfoIndex] ?? 'filterFrequency';
+      const newEnabled = lfoParams.enabled ?? this.lfoEnabled[lfoIndex];
+
+      if (wasEnabled && this.lfoTargets[lfoIndex] !== null) {
+        this.disconnectLfoFromTarget(lfoIndex, this.lfoTargets[lfoIndex]!);
+      }
+      this.lfoTargets[lfoIndex] = newTarget;
+      this.lfoEnabled[lfoIndex] = newEnabled;
+      if (newEnabled) {
+        // Retrigger (with fade-in) when the LFO transitions from disabled → enabled.
+        if (!wasEnabled) {
+          lfo.retrigger();
+        }
+        this.connectLfoToTarget(lfoIndex, newTarget);
+      }
+    }
+  }
+
+  private connectLfoToTarget(lfoIndex: number, target: LfoTarget): void {
+    const lfo = this.lfoControllers[lfoIndex];
+    switch (target) {
+      case 'oscMix':      this.voiceManager.setOscMixModulation(lfo.getOutput()); return;
+      case 'oscPreGain':  this.voiceManager.setOscPreGainModulation(lfo.getOutput()); return;
+      case 'oscPostGain': this.voiceManager.setOscPostGainModulation(lfo.getOutput()); return;
+      case 'oscPitch':    this.voiceManager.setPitchModulation(lfo.getOutput()); return;
+      case 'lfo1Rate':    lfo.connectTo(this.lfoControllers[0].getRateParam()); return;
+      case 'lfo1Depth':   lfo.connectTo(this.lfoControllers[0].getDepthParam()); return;
+      case 'lfo2Rate':    lfo.connectTo(this.lfoControllers[1].getRateParam()); return;
+      case 'lfo2Depth':   lfo.connectTo(this.lfoControllers[1].getDepthParam()); return;
+    }
+    const param = this.getLfoAudioParam(target);
+    if (param) lfo.connectTo(param);
+  }
+
+  private disconnectLfoFromTarget(lfoIndex: number, target: LfoTarget): void {
+    const lfo = this.lfoControllers[lfoIndex];
+    switch (target) {
+      case 'oscMix':      this.voiceManager.setOscMixModulation(null); return;
+      case 'oscPreGain':  this.voiceManager.setOscPreGainModulation(null); return;
+      case 'oscPostGain': this.voiceManager.setOscPostGainModulation(null); return;
+      case 'oscPitch':    this.voiceManager.setPitchModulation(null); return;
+      case 'lfo1Rate':    lfo.disconnectFrom(this.lfoControllers[0].getRateParam()); return;
+      case 'lfo1Depth':   lfo.disconnectFrom(this.lfoControllers[0].getDepthParam()); return;
+      case 'lfo2Rate':    lfo.disconnectFrom(this.lfoControllers[1].getRateParam()); return;
+      case 'lfo2Depth':   lfo.disconnectFrom(this.lfoControllers[1].getDepthParam()); return;
+    }
+    const param = this.getLfoAudioParam(target);
+    if (param) lfo.disconnectFrom(param);
+  }
+
+  private getLfoAudioParam(target: LfoTarget): AudioParam | null {
+    switch (target) {
+      case 'filterFrequency':       return this.filterController.getFrequencyParam();
+      case 'filterQ':               return this.filterController.getQParam();
+      case 'ladderFilterFrequency': return this.ladderFilterController.getCutoffParam();
+      case 'ladderFilterResonance': return this.ladderFilterController.getResonanceParam();
+      case 'delayMix':   return this.delayEnabled  ? this.delayController.getWetGainParam()  : null;
+      case 'reverbMix':  return this.reverbEnabled ? this.reverbController.getWetGainParam() : null;
+      default:           return null; // per-voice targets handled in connect/disconnectLfoFromTarget
+    }
   }
 }

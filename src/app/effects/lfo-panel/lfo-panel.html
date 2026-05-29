@@ -1,0 +1,274 @@
+<div class="lfo-container">
+  <!-- LFO 1 -->
+  <fieldset>
+    <legend>LFO 1</legend>
+    <label>
+      <input
+        type="checkbox"
+        [checked]="lfo1Enabled()"
+        (change)="toggleLfo1Enabled()">
+      Enable
+    </label>
+
+    @if (lfo1Enabled()) {
+      <label>
+        Target:
+        <select
+          [value]="lfo1Target()"
+          (change)="onLfo1TargetChange($event)">
+          @for (t of lfo1Targets; track t.value) {
+            <option [value]="t.value">{{ t.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Shape:
+        <select
+          [value]="lfo1Shape()"
+          (change)="onLfo1ShapeChange($event)">
+          @for (shape of lfoShapes; track shape) {
+            <option [value]="shape">{{ shape }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Rate:
+        <input
+          type="range"
+          min="0.1"
+          max="20"
+          step="0.1"
+          [value]="lfo1Rate()"
+          (input)="onLfo1RateChange(+$any($event.target).value)">
+        <span>{{ lfo1Rate().toFixed(1) }} Hz</span>
+      </label>
+
+      <label>
+        Depth:
+        <input
+          type="range"
+          min="0"
+          [max]="depthMax[lfo1Target()]"
+          [step]="depthMax[lfo1Target()] <= 1 ? 0.01 : 1"
+          [value]="lfo1Depth()"
+          (input)="onLfo1DepthChange(+$any($event.target).value)">
+        <span>{{ lfo1Depth() % 1 === 0 ? lfo1Depth().toFixed(0) : lfo1Depth().toFixed(2) }}{{ depthUnit[lfo1Target()] }}</span>
+      </label>
+
+      <div class="lfo-indicator" [title]="lfo1Indicator().currentValueLabel">
+        <div class="lfo-indicator__band"
+          [style.left.%]="lfo1Indicator().bandLeftPercent"
+          [style.width.%]="lfo1Indicator().bandWidthPercent">
+        </div>
+        <div class="lfo-indicator__cursor"
+          [style.left.%]="lfo1Indicator().cursorPercent">
+        </div>
+      </div>
+      <span class="lfo-indicator__label">{{ lfo1Indicator().currentValueLabel }}</span>
+
+      <label>
+        <input
+          type="checkbox"
+          [checked]="lfo1Retrigger()"
+          (change)="toggleLfo1Retrigger()">
+        Retrigger on Note
+      </label>
+
+      <label>
+        Fade In:
+        <input
+          type="range"
+          min="0"
+          max="2"
+          step="0.1"
+          [value]="lfo1FadeIn()"
+          (input)="onLfo1FadeInChange(+$any($event.target).value)">
+        <span>{{ lfo1FadeIn() === 0 ? 'Off' : lfo1FadeIn().toFixed(1) + ' s' }}</span>
+      </label>
+    }
+  </fieldset>
+
+  <!-- LFO 2 -->
+  <fieldset>
+    <legend>LFO 2</legend>
+    <label>
+      <input
+        type="checkbox"
+        [checked]="lfo2Enabled()"
+        (change)="toggleLfo2Enabled()">
+      Enable
+    </label>
+
+    @if (lfo2Enabled()) {
+      <label>
+        Target:
+        <select
+          [value]="lfo2Target()"
+          (change)="onLfo2TargetChange($event)">
+          @for (t of lfo2Targets; track t.value) {
+            <option [value]="t.value">{{ t.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Shape:
+        <select
+          [value]="lfo2Shape()"
+          (change)="onLfo2ShapeChange($event)">
+          @for (shape of lfoShapes; track shape) {
+            <option [value]="shape">{{ shape }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Rate:
+        <input
+          type="range"
+          min="0.1"
+          max="20"
+          step="0.1"
+          [value]="lfo2Rate()"
+          (input)="onLfo2RateChange(+$any($event.target).value)">
+        <span>{{ lfo2Rate().toFixed(1) }} Hz</span>
+      </label>
+
+      <label>
+        Depth:
+        <input
+          type="range"
+          min="0"
+          [max]="depthMax[lfo2Target()]"
+          [step]="depthMax[lfo2Target()] <= 1 ? 0.01 : 1"
+          [value]="lfo2Depth()"
+          (input)="onLfo2DepthChange(+$any($event.target).value)">
+        <span>{{ lfo2Depth() % 1 === 0 ? lfo2Depth().toFixed(0) : lfo2Depth().toFixed(2) }}{{ depthUnit[lfo2Target()] }}</span>
+      </label>
+
+      <div class="lfo-indicator" [title]="lfo2Indicator().currentValueLabel">
+        <div class="lfo-indicator__band"
+          [style.left.%]="lfo2Indicator().bandLeftPercent"
+          [style.width.%]="lfo2Indicator().bandWidthPercent">
+        </div>
+        <div class="lfo-indicator__cursor"
+          [style.left.%]="lfo2Indicator().cursorPercent">
+        </div>
+      </div>
+      <span class="lfo-indicator__label">{{ lfo2Indicator().currentValueLabel }}</span>
+
+      <label>
+        <input
+          type="checkbox"
+          [checked]="lfo2Retrigger()"
+          (change)="toggleLfo2Retrigger()">
+        Retrigger on Note
+      </label>
+
+      <label>
+        Fade In:
+        <input
+          type="range"
+          min="0"
+          max="2"
+          step="0.1"
+          [value]="lfo2FadeIn()"
+          (input)="onLfo2FadeInChange(+$any($event.target).value)">
+        <span>{{ lfo2FadeIn() === 0 ? 'Off' : lfo2FadeIn().toFixed(1) + ' s' }}</span>
+      </label>
+    }
+  </fieldset>
+
+  <!-- LFO 3 -->
+  <fieldset>
+    <legend>LFO 3</legend>
+    <label>
+      <input
+        type="checkbox"
+        [checked]="lfo3Enabled()"
+        (change)="toggleLfo3Enabled()">
+      Enable
+    </label>
+
+    @if (lfo3Enabled()) {
+      <label>
+        Target:
+        <select
+          [value]="lfo3Target()"
+          (change)="onLfo3TargetChange($event)">
+          @for (t of lfo3Targets; track t.value) {
+            <option [value]="t.value">{{ t.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Shape:
+        <select
+          [value]="lfo3Shape()"
+          (change)="onLfo3ShapeChange($event)">
+          @for (shape of lfoShapes; track shape) {
+            <option [value]="shape">{{ shape }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Rate:
+        <input
+          type="range"
+          min="0.1"
+          max="20"
+          step="0.1"
+          [value]="lfo3Rate()"
+          (input)="onLfo3RateChange(+$any($event.target).value)">
+        <span>{{ lfo3Rate().toFixed(1) }} Hz</span>
+      </label>
+
+      <label>
+        Depth:
+        <input
+          type="range"
+          min="0"
+          [max]="depthMax[lfo3Target()]"
+          [step]="depthMax[lfo3Target()] <= 1 ? 0.01 : 1"
+          [value]="lfo3Depth()"
+          (input)="onLfo3DepthChange(+$any($event.target).value)">
+        <span>{{ lfo3Depth() % 1 === 0 ? lfo3Depth().toFixed(0) : lfo3Depth().toFixed(2) }}{{ depthUnit[lfo3Target()] }}</span>
+      </label>
+
+      <div class="lfo-indicator" [title]="lfo3Indicator().currentValueLabel">
+        <div class="lfo-indicator__band"
+          [style.left.%]="lfo3Indicator().bandLeftPercent"
+          [style.width.%]="lfo3Indicator().bandWidthPercent">
+        </div>
+        <div class="lfo-indicator__cursor"
+          [style.left.%]="lfo3Indicator().cursorPercent">
+        </div>
+      </div>
+      <span class="lfo-indicator__label">{{ lfo3Indicator().currentValueLabel }}</span>
+
+      <label>
+        <input
+          type="checkbox"
+          [checked]="lfo3Retrigger()"
+          (change)="toggleLfo3Retrigger()">
+        Retrigger on Note
+      </label>
+
+      <label>
+        Fade In:
+        <input
+          type="range"
+          min="0"
+          max="2"
+          step="0.1"
+          [value]="lfo3FadeIn()"
+          (input)="onLfo3FadeInChange(+$any($event.target).value)">
+        <span>{{ lfo3FadeIn() === 0 ? 'Off' : lfo3FadeIn().toFixed(1) + ' s' }}</span>
+      </label>
+    }
+  </fieldset>
+</div>

@@ -111,6 +111,10 @@ export class FilterController {
     return this.filterNode.frequency;
   }
 
+  getQParam(): AudioParam {
+    return this.filterNode.Q;
+  }
+
   getDryGainValue(): number {
     return this._dryGainValue;
   }
