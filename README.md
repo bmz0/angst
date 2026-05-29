@@ -1,6 +1,6 @@
 # Angst
 
-WebAudio prototype mono-synth application built with Angular 21 and Copilot (Claude).
+WebAudio synthesizer application built with Angular and Copilot (Claude Sonnet).
 
 ## Local server
 
