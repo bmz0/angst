@@ -169,14 +169,23 @@ export class FilterController {
     }
   }
 
-  trackNote(noteFrequency: number, at?: number): void {
+  trackNote(noteFrequency: number, at?: number, glideTime: number = 0): void {
+    const prevNoteFrequency = this.lastTrackedNoteFrequency;
     this.lastTrackedNoteFrequency = noteFrequency;
     const now = this.audioContext.currentTime;
     const t = at ?? now;
-    const trackedFrequency = this.baseFrequency + 
+    const newTracked = this.baseFrequency +
       (noteFrequency - this.baseFrequency) * this.keyboardTracking;
-    
-    this.filterNode.frequency.setValueAtTime(trackedFrequency, t);
+
+    this.filterNode.frequency.cancelScheduledValues(t);
+    if (glideTime > 0 && prevNoteFrequency > 0) {
+      const prevTracked = this.baseFrequency +
+        (prevNoteFrequency - this.baseFrequency) * this.keyboardTracking;
+      this.filterNode.frequency.setValueAtTime(prevTracked, t);
+      this.filterNode.frequency.linearRampToValueAtTime(newTracked, t + glideTime);
+    } else {
+      this.filterNode.frequency.setValueAtTime(newTracked, t);
+    }
   }
 
   private updateCompressorThreshold(q: number): void {

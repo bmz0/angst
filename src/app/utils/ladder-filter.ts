@@ -162,14 +162,24 @@ export class LadderFilterController {
     }
   }
 
-  trackNote(noteFrequency: number, at?: number): void {
+  trackNote(noteFrequency: number, at?: number, glideTime: number = 0): void {
+    const prevNoteFrequency = this.lastTrackedNoteFrequency;
     this.lastTrackedNoteFrequency = noteFrequency;
     const now = this.audioContext.currentTime;
     const t = at ?? now;
-    const trackedFrequency =
+    const newTracked =
       this.baseFrequency + (noteFrequency - this.baseFrequency) * this.keyboardTracking;
+    const param = this.param('cutoff');
 
-    this.param('cutoff').setValueAtTime(trackedFrequency, t);
+    param.cancelScheduledValues(t);
+    if (glideTime > 0 && prevNoteFrequency > 0) {
+      const prevTracked =
+        this.baseFrequency + (prevNoteFrequency - this.baseFrequency) * this.keyboardTracking;
+      param.setValueAtTime(prevTracked, t);
+      param.linearRampToValueAtTime(newTracked, t + glideTime);
+    } else {
+      param.setValueAtTime(newTracked, t);
+    }
   }
 
   private param(name: string): AudioParam {

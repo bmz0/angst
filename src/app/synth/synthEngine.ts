@@ -5,6 +5,7 @@ import { RectifierMode, RectifierParameters } from '../utils/rectifier.js';
 import { EnvelopeParameters } from '../utils/envelope.js';
 import { FilterController, FilterParameters, SupportedFilterType } from '../utils/filter.js';
 import { LadderFilterController, LadderFilterParameters } from '../utils/ladder-filter.js';
+import { CombFilterController, CombFilterParameters } from '../utils/comb-filter.js';
 import { OscillatorType } from '../utils/oscillator.js';
 import { LfoController, LfoParameters, LfoTarget } from '../utils/lfo.js';
 import { VoiceManager, PolyphonyMode } from './voice-manager.js';
@@ -33,6 +34,12 @@ export interface SynthEngineConfig {
   ladderFilterDrive?: number;
   ladderFilterKeyboardTracking?: number;
   ladderFilterPostGain?: number;
+  combFilterEnabled?: boolean;
+  combFilterDelayTime?: number;
+  combFilterGain?: number;
+  combFilterFeedback?: boolean;
+  combFilterPostGain?: number;
+  combFilterKeyboardTracking?: number;
   overdriveEnabled?: boolean;
   overdriveAmount?: number;
   overdriveFold?: boolean;
@@ -70,6 +77,7 @@ export interface SynthEngineParameters {
   glideTime?: number;
   filter?: FilterParameters;
   ladderFilter?: LadderFilterParameters;
+  combFilter?: CombFilterParameters;
   overdrive?: OverdriveParameters;
   rectifier?: RectifierParameters;
   delay?: DelayParameters;
@@ -84,6 +92,7 @@ export class SynthEngine {
   private voiceManager: VoiceManager;
   private filterController: FilterController;
   private ladderFilterController: LadderFilterController;
+  private combFilterController: CombFilterController;
   private delayController: DelayController;
   private reverbController: ReverbController;
   private lfoControllers: LfoController[];
@@ -94,6 +103,7 @@ export class SynthEngine {
   private lfoRetrigger: boolean[] = [true, true, true];
   private delayEnabled: boolean;
   private reverbEnabled: boolean;
+  private glideTime: number;
 
   /**
    * Loads all AudioWorklet modules required by the engine into the given
@@ -111,6 +121,7 @@ export class SynthEngine {
     this.audioContext = config.audioContext;
     this.delayEnabled = config.delayEnabled ?? false;
     this.reverbEnabled = config.reverbEnabled ?? false;
+    this.glideTime = config.glideTime ?? 0;
 
     this.reverbController = new ReverbController({
       audioContext: this.audioContext,
@@ -158,9 +169,20 @@ export class SynthEngine {
       mix: config.filterMix ?? 1,
     });
 
-    this.voiceManager = new VoiceManager({
+    this.combFilterController = new CombFilterController({
       audioContext: this.audioContext,
       destination: this.filterController.getInput(),
+      delayTime: config.combFilterDelayTime ?? 0.001,
+      gain: config.combFilterGain ?? -0.7,
+      feedback: config.combFilterFeedback ?? false,
+      enabled: config.combFilterEnabled ?? false,
+      postGain: config.combFilterPostGain ?? 1,
+      keyboardTracking: config.combFilterKeyboardTracking ?? 0,
+    });
+
+    this.voiceManager = new VoiceManager({
+      audioContext: this.audioContext,
+      destination: this.combFilterController.getInput(),
       polyphonyMode: config.polyphonyMode,
       oscillator1Type: config.oscillator1Type,
       oscillator2Type: config.oscillator2Type,
@@ -201,8 +223,9 @@ export class SynthEngine {
       }
     }
     this.voiceManager.play(noteId, frequency, at);
-    this.filterController.trackNote(frequency, at);
-    this.ladderFilterController.trackNote(frequency, at);
+    this.filterController.trackNote(frequency, at, this.glideTime);
+    this.ladderFilterController.trackNote(frequency, at, this.glideTime);
+    this.combFilterController.trackNote(frequency, at, this.glideTime);
   }
 
   stop(at?: number): void {
@@ -227,7 +250,10 @@ export class SynthEngine {
     if (params.oscillator2Amount !== undefined) voiceParams.oscillator2Amount = params.oscillator2Amount;
     if (params.oscillator2SubOctave !== undefined) voiceParams.oscillator2SubOctave = params.oscillator2SubOctave;
     if (params.oscillator2Invert !== undefined) voiceParams.oscillator2Invert = params.oscillator2Invert;
-    if (params.glideTime !== undefined) voiceParams.glideTime = params.glideTime;
+    if (params.glideTime !== undefined) {
+      voiceParams.glideTime = params.glideTime;
+      this.glideTime = params.glideTime;
+    }
     if (params.envelope !== undefined) voiceParams.envelope = params.envelope;
     if (params.overdrive !== undefined) voiceParams.overdrive = params.overdrive;
     if (params.rectifier !== undefined) voiceParams.rectifier = params.rectifier;
@@ -242,6 +268,10 @@ export class SynthEngine {
 
     if (params.ladderFilter !== undefined) {
       this.ladderFilterController.setParameters(params.ladderFilter);
+    }
+
+    if (params.combFilter !== undefined) {
+      this.combFilterController.setParameters(params.combFilter);
     }
 
     if (params.delay !== undefined) {
@@ -299,6 +329,7 @@ export class SynthEngine {
     this.voiceManager.disconnect();
     this.filterController.disconnect();
     this.ladderFilterController.disconnect();
+    this.combFilterController.disconnect();
     this.delayController.disconnect();
     this.reverbController.disconnect();
   }

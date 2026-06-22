@@ -35,6 +35,14 @@ export interface SynthPatch {
   ladderFilterKeyboardTracking: number;
   ladderFilterPostGain: number;
 
+  // Comb Filter
+  combFilterEnabled: boolean;
+  combFilterDelayTime: number;
+  combFilterGain: number;
+  combFilterFeedback: boolean;
+  combFilterPostGain: number;
+  combFilterKeyboardTracking: number;
+
   // Amp Envelope
   envelopeEnabled: boolean;
   envelopeAttack: number;
@@ -131,6 +139,13 @@ export const DEFAULT_PATCH: Readonly<SynthPatch> = {
   ladderFilterDrive: 4,
   ladderFilterKeyboardTracking: 0.38,
   ladderFilterPostGain: 1,
+
+  combFilterEnabled: false,
+  combFilterDelayTime: 0.001,
+  combFilterGain: -0.7,
+  combFilterFeedback: false,
+  combFilterPostGain: 1,
+  combFilterKeyboardTracking: 0,
 
   envelopeEnabled: true,
   envelopeAttack: 0.053,
@@ -296,6 +311,13 @@ export function synthPatchFromJson(json: string): SynthPatch {
     ladderFilterKeyboardTracking: numberOr('ladderFilterKeyboardTracking', 0.38),
     ladderFilterPostGain: numberOr('ladderFilterPostGain', 1),
 
+    combFilterEnabled: booleanOr('combFilterEnabled', false),
+    combFilterDelayTime: numberOr('combFilterDelayTime', 0.001),
+    combFilterGain: numberOr('combFilterGain', -0.7),
+    combFilterFeedback: booleanOr('combFilterFeedback', false),
+    combFilterPostGain: numberOr('combFilterPostGain', 1),
+    combFilterKeyboardTracking: numberOr('combFilterKeyboardTracking', 0),
+
     envelopeEnabled: requireBoolean('envelopeEnabled'),
     envelopeAttack: requireNumber('envelopeAttack'),
     envelopeDecay: requireNumber('envelopeDecay'),
@@ -408,6 +430,13 @@ export function synthPatchToEngineConfig(
     ladderFilterKeyboardTracking: patch.ladderFilterKeyboardTracking,
     ladderFilterPostGain: patch.ladderFilterPostGain,
 
+    combFilterEnabled: patch.combFilterEnabled,
+    combFilterDelayTime: patch.combFilterDelayTime,
+    combFilterGain: patch.combFilterGain,
+    combFilterFeedback: patch.combFilterFeedback,
+    combFilterPostGain: patch.combFilterPostGain,
+    combFilterKeyboardTracking: patch.combFilterKeyboardTracking,
+
     envelopeEnabled: patch.envelopeEnabled,
     envelopeAttack: patch.envelopeAttack,
     envelopeDecay: patch.envelopeDecay,
@@ -471,6 +500,13 @@ export function mergePatchWithParams(patch: SynthPatch, params: SynthEngineParam
   if (params.ladderFilter?.drive !== undefined) p.ladderFilterDrive = params.ladderFilter.drive;
   if (params.ladderFilter?.keyboardTracking !== undefined) p.ladderFilterKeyboardTracking = params.ladderFilter.keyboardTracking;
   if (params.ladderFilter?.postGain !== undefined) p.ladderFilterPostGain = params.ladderFilter.postGain;
+
+  if (params.combFilter?.enabled !== undefined) p.combFilterEnabled = params.combFilter.enabled;
+  if (params.combFilter?.delayTime !== undefined) p.combFilterDelayTime = params.combFilter.delayTime;
+  if (params.combFilter?.gain !== undefined) p.combFilterGain = params.combFilter.gain;
+  if (params.combFilter?.feedback !== undefined) p.combFilterFeedback = params.combFilter.feedback;
+  if (params.combFilter?.postGain !== undefined) p.combFilterPostGain = params.combFilter.postGain;
+  if (params.combFilter?.keyboardTracking !== undefined) p.combFilterKeyboardTracking = params.combFilter.keyboardTracking;
 
   if (params.envelope?.enabled !== undefined) p.envelopeEnabled = params.envelope.enabled;
   if (params.envelope?.attack !== undefined) p.envelopeAttack = params.envelope.attack;
