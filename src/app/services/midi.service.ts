@@ -47,7 +47,6 @@ export class MidiService {
       }
       this.midiAccess = await navigator.requestMIDIAccess();
       this.status.set('granted');
-      await this.attachListeners(this.midiAccess);
       this.midiAccess.onstatechange = async (e: Event) => {
         const port = (e as MIDIConnectionEvent).port;
         if (port?.state === 'disconnected') {
@@ -57,6 +56,7 @@ export class MidiService {
           await this.attachListeners(this.midiAccess!);
         }
       };
+      await this.attachListeners(this.midiAccess);
       return 'granted';
     } catch {
       this.status.set('denied');

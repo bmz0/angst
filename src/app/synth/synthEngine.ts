@@ -234,6 +234,15 @@ export class SynthEngine {
 
   stopNote(noteId: number, at?: number): void {
     this.voiceManager.stop(noteId, at);
+    // In mono mode the voice may have slid back to a still-held note.
+    // Re-sync all keyboard-tracking filters to that frequency so they don't
+    // stay locked to the released note's pitch (the comb/filter artifact).
+    const newFrequency = this.voiceManager.getCurrentFrequency();
+    if (newFrequency !== undefined) {
+      this.filterController.trackNote(newFrequency, at, this.glideTime);
+      this.ladderFilterController.trackNote(newFrequency, at, this.glideTime);
+      this.combFilterController.trackNote(newFrequency, at, this.glideTime);
+    }
   }
 
   isPlaying(): boolean {

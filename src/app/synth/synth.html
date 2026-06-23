@@ -1,3 +1,13 @@
+@if (needsInit()) {
+  <div class="reinit-overlay" role="dialog" aria-modal="true" aria-labelledby="reinit-title">
+    <div class="reinit-dialog">
+      <h2 id="reinit-title">Audio needs to be initialized</h2>
+      <p>Click the button below to resume.</p>
+      <button type="button" (click)="reinitialize()">Initialize audio</button>
+    </div>
+  </div>
+}
+
 <div class="synth-container">
   <div class="oscillator-controls">
     <oscillator-panel>

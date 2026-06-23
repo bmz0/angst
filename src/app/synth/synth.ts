@@ -1,4 +1,5 @@
 import { Component, viewChild, signal, DestroyRef, inject } from '@angular/core';
+import { AudioContextService } from '../services/audio-context.service.js';
 import { Keyboard } from '../keyboard/keyboard.js';
 import { Visualizer } from '../visualizer/visualizer.js';
 import { OscillatorPanel } from '../effects/oscillator-panel/oscillator-panel.js';
@@ -32,9 +33,11 @@ export class Synth {
 
   private readonly synthEngineService = inject(SynthEngineService);
   private readonly midiService = inject(MidiService);
+  private readonly audioContextService = inject(AudioContextService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected currentOctave = signal(4);
+  protected needsInit = signal(false);
   private activeVisualizerTimeout: number | null = null;
   /** Maps key identity (e.g. "C-0") to the frequency that was actually played. */
   private readonly playedNotes = new Map<string, number>();
@@ -73,8 +76,21 @@ export class Synth {
   }
 
   private async init(): Promise<void> {
-    await this.synthEngineService.initialize(synthPatchToEngineConfig(DEFAULT_PATCH));
-    await this.midiService.initialize();
+    if (!this.audioContextService.getContext()) {
+      this.needsInit.set(true);
+      return;
+    }
+    this.needsInit.set(false);
+    await Promise.all([
+      this.synthEngineService.initialize(synthPatchToEngineConfig(DEFAULT_PATCH)),
+      this.midiService.initialize(),
+    ]);
+  }
+
+  protected async reinitialize(): Promise<void> {
+    this.audioContextService.initialize();
+    this.audioContextService.resume();
+    await this.init();
   }
 
   protected play(note: string, octaveOffset: number = 0): void {
